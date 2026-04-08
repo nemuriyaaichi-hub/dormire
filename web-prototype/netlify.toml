@@ -1,0 +1,22 @@
+# Dormire Phase 0 prototype — Netlify 設定
+#
+# 静的ファイルのみ（ビルド不要）。`web-prototype/` をそのまま公開する。
+# ルートから `netlify deploy --dir=web-prototype` で即デプロイ可能。
+
+[build]
+  publish = "."
+  command = ""
+
+# スマホカメラ API を使うので HTTPS は必須。
+# Netlify は標準で HTTPS 提供、追加設定不要。
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # getUserMedia はセキュアコンテキストのみ。
+    Permissions-Policy = "camera=(self), microphone=()"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# MediaPipe の WASM を CDN から読み込むので COEP/COOP は設定しない。
+# （SharedArrayBuffer が必要になった場合は cross-origin-isolated を追加）

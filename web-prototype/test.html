@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dormire Phase 0 / calc.js ユニットテスト</title>
+    <link rel="stylesheet" href="./style.css" />
+    <style>
+      .pass {
+        color: var(--ok);
+      }
+      .fail {
+        color: var(--danger);
+      }
+      pre {
+        background: #000;
+        padding: 10px;
+        border-radius: 6px;
+        overflow: auto;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>calc.js ユニットテスト</h1>
+        <div class="subtitle">合成ランドマークでの検算</div>
+      </div>
+      <a href="./index.html" class="subtitle">▶ 実機計測</a>
+    </header>
+    <main>
+      <section class="card">
+        <h3 style="margin: 0 0 8px 0; font-size: 14px">テスト結果</h3>
+        <div id="summary" class="status"></div>
+        <pre id="log"></pre>
+      </section>
+
+      <section class="card">
+        <h3 style="margin: 0 0 8px 0; font-size: 14px">算出値 (直立ポーズ)</h3>
+        <table class="results">
+          <tbody id="valuesBody"></tbody>
+        </table>
+      </section>
+    </main>
+
+    <script type="module">
+      import {
+        calculateAll,
+        distance2D,
+        distance3D,
+        angleFromHorizontal,
+        angleFromVertical,
+        midpoint,
+        classifyPosture,
+        LABELS,
+        fmt,
+      } from "./calc.js";
+
+      // ---- 簡易テストランナー --------------------------------
+      const log = document.getElementById("log");
+      const summary = document.getElementById("summary");
+      let pass = 0;
+      let fail = 0;
+      function assert(name, cond, detail = "") {
+        if (cond) {
+          pass++;
+          log.innerHTML += `<span class="pass">✓ ${name}</span>\n`;
+        } else {
+          fail++;
+          log.innerHTML += `<span class="fail">✗ ${name} ${detail}</span>\n`;
+        }
+      }
+      function near(actual, expected, tol = 1e-6) {
+        return Math.abs(actual - expected) <= tol;
+      }
+
+      // ---- 基本幾何 ------------------------------------------
+      assert(
+        "distance2D (3-4-5)",
+        near(distance2D({ x: 0, y: 0 }, { x: 3, y: 4 }), 5)
+      );
+      assert(
+        "distance3D (1-2-2)",
+        near(
+          distance3D({ x: 0, y: 0, z: 0 }, { x: 1, y: 2, z: 2 }),
+          3,
+          1e-9
+        )
+      );
+      assert(
+        "midpoint",
+        (() => {
+          const m = midpoint({ x: 0, y: 0 }, { x: 4, y: 6 });
+          return m.x === 2 && m.y === 3;
+        })()
+      );
+      assert(
+        "angleFromHorizontal (水平線 = 0°)",
+        near(angleFromHorizontal({ x: 0, y: 1 }, { x: 1, y: 1 }), 0, 1e-9)
+      );
+      assert(
+        "angleFromHorizontal (45°)",
+        near(
+          Math.abs(angleFromHorizontal({ x: 0, y: 0 }, { x: 1, y: 1 })),
+          45,
+          1e-9
+        )
+      );
+      assert(
+        "angleFromVertical (鉛直 = 0°)",
+        near(angleFromVertical({ x: 0.5, y: 0 }, { x: 0.5, y: 1 }), 0, 1e-9)
+      );
+      assert(
+        "angleFromVertical (30°傾斜)",
+        near(
+          angleFromVertical(
+            { x: 0, y: 0 },
+            { x: Math.tan((30 * Math.PI) / 180), y: 1 }
+          ),
+          30,
+          1e-6
+        )
+      );
+
+      // ---- 合成ランドマーク（正面直立）----------------------
+      // 画像座標 [0,1]、中央に直立した人物を想定
+      const upright = Array.from({ length: 33 }, () => ({ x: 0.5, y: 0.5, z: 0 }));
+      // nose
+      upright[0] = { x: 0.5, y: 0.10, z: 0 };
+      // ears
+      upright[7] = { x: 0.45, y: 0.11, z: 0 }; // LEFT_EAR
+      upright[8] = { x: 0.55, y: 0.11, z: 0 }; // RIGHT_EAR
+      // shoulders
+      upright[11] = { x: 0.40, y: 0.22, z: 0 }; // LEFT_SHOULDER
+      upright[12] = { x: 0.60, y: 0.22, z: 0 }; // RIGHT_SHOULDER
+      // elbows
+      upright[13] = { x: 0.38, y: 0.38, z: 0 }; // LEFT_ELBOW
+      upright[14] = { x: 0.62, y: 0.38, z: 0 }; // RIGHT_ELBOW
+      // wrists
+      upright[15] = { x: 0.37, y: 0.54, z: 0 }; // LEFT_WRIST
+      upright[16] = { x: 0.63, y: 0.54, z: 0 }; // RIGHT_WRIST
+      // hips
+      upright[23] = { x: 0.43, y: 0.58, z: 0 }; // LEFT_HIP
+      upright[24] = { x: 0.57, y: 0.58, z: 0 }; // RIGHT_HIP
+      // knees
+      upright[25] = { x: 0.43, y: 0.78, z: 0 }; // LEFT_KNEE
+      upright[26] = { x: 0.57, y: 0.78, z: 0 }; // RIGHT_KNEE
+      // ankles
+      upright[27] = { x: 0.43, y: 0.96, z: 0 }; // LEFT_ANKLE
+      upright[28] = { x: 0.57, y: 0.96, z: 0 }; // RIGHT_ANKLE
+
+      const v = calculateAll(upright);
+
+      // 対称性: 左右の腕・脚・肩幅などは同一であるべき
+      assert(
+        "symmetry: 左右腕長",
+        near(v.right_arm_length, v.left_arm_length, 1e-9)
+      );
+      assert(
+        "symmetry: 左右脚長",
+        near(v.right_leg_length, v.left_leg_length, 1e-9)
+      );
+      assert(
+        "symmetry: 左右 耳→肩",
+        near(v.right_ear_shoulder, v.left_ear_shoulder, 1e-9)
+      );
+      assert(
+        "symmetry: 左右 肩幅",
+        near(v.right_shoulder_width, v.left_shoulder_width, 1e-9)
+      );
+
+      // 水平姿勢: 肩と腰の角度は0に近い
+      assert("直立: 肩水平 ≒ 0°", v.shoulder_angle < 1);
+      assert("直立: 骨盤水平 ≒ 0°", v.hip_angle < 1);
+
+      // 鉛直姿勢: 背中角度は小さい
+      assert("直立: 背中角度 < 5°", v.back_angle < 5);
+
+      // 姿勢分類: 直立なら "N"
+      assert(
+        `直立 → posture = N (actual: ${v.posture})`,
+        v.posture === "N"
+      );
+
+      // 算出値が数値であること
+      const numericKeys = Object.keys(v).filter((k) => k !== "posture");
+      assert(
+        "全 20 項目が数値",
+        numericKeys.every(
+          (k) => typeof v[k] === "number" && Number.isFinite(v[k])
+        )
+      );
+
+      // ---- 左肩下がり ----------------------------------------
+      const leftShoulderDown = JSON.parse(JSON.stringify(upright));
+      leftShoulderDown[11] = { x: 0.38, y: 0.28, z: 0 }; // 左肩が下がる
+      const v2 = calculateAll(leftShoulderDown);
+      assert(
+        `肩傾斜: shoulder_angle > 直立 (直立:${fmt(v.shoulder_angle)} → 傾斜:${fmt(
+          v2.shoulder_angle
+        )})`,
+        v2.shoulder_angle > v.shoulder_angle
+      );
+
+      // ---- 前傾姿勢 (丸) ------------------------------------
+      const stoop = JSON.parse(JSON.stringify(upright));
+      stoop[11] = { x: 0.38, y: 0.26, z: -0.1 };
+      stoop[12] = { x: 0.58, y: 0.26, z: -0.1 };
+      stoop[0] = { x: 0.5, y: 0.18, z: -0.15 };
+      const v3 = calculateAll(stoop);
+      assert(
+        `前傾: head_angle > 直立 (${fmt(v.head_angle)} → ${fmt(v3.head_angle)})`,
+        v3.head_angle > v.head_angle
+      );
+
+      // ---- 集計 -----------------------------------------------
+      summary.textContent = `${pass} passed / ${fail} failed`;
+      summary.className = "status " + (fail === 0 ? "ok" : "error");
+
+      // ---- 値の表示 ------------------------------------------
+      const order = [
+        "right_arm_length",
+        "left_arm_length",
+        "right_leg_length",
+        "left_leg_length",
+        "knee_ankle",
+        "back_length",
+        "back_angle",
+        "head_angle",
+        "shoulder_angle",
+        "hip_angle",
+        "neck_hip",
+        "hip_knee",
+        "right_shoulder_width",
+        "left_shoulder_width",
+        "right_ear_shoulder",
+        "left_ear_shoulder",
+        "neck_base",
+        "neck_width",
+        "head_width",
+        "posture",
+      ];
+      document.getElementById("valuesBody").innerHTML = order
+        .map(
+          (k) =>
+            `<tr><th>${LABELS[k]}</th><td>${fmt(v[k])}</td></tr>`
+        )
+        .join("");
+    </script>
+  </body>
+</html>
