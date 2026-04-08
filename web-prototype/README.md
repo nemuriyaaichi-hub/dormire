@@ -4,6 +4,12 @@
 
 **目的:** MediaPipe Pose がスマートフォンブラウザで動き、既存 Django 版の 20 項目を算出できるかを検証して **Go/No-Go を判定する**。
 
+## 🌐 公開 URL
+
+**👉 https://nemuriyaaichi-hub.github.io/dormire/**
+
+GitHub Pages で配信中。`main` ブランチに push されると [.github/workflows/pages.yml](../.github/workflows/pages.yml) が自動でデプロイします。
+
 ---
 
 ## 🏗️ 構成
