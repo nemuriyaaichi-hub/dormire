@@ -1,0 +1,15 @@
+[Unit]
+Description=Gunicorn for Django REST API
+After=network.target
+
+[Service]
+User=ubuntu
+Group=www-data
+WorkingDirectory=/var/www/api/nemuriya-backend
+EnvironmentFile=/var/www/api/nemuriya-backend/.env
+ExecStart=/var/www/api/nemuriya-backend/venv/bin/gunicorn --access-logfile - --workers 3 --bind unix:/var/www/api/nemuriya-backend/api.sock config.wsgi:application
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html jang="ja">
+
+<body>
+    <p>
+        {{ measure.user.username }} 様<br>
+        Dormireをご利用頂きまして、ありがとうございます。<br>
+        Dormire運営事務局です。<br>
+    </p>
+    <p>
+        解析診断結果を発行しました。<br>
+        解析した情報は下記の通りです。<br>
+    </p>
+    <p>
+        【ユーザー情報】<br>
+        お名前（漢字）: {{ measure.user.username }}<br>
+        お名前（カナ）: {{ order.customer.kana }}<br>
+    </p>
+
+    <p>
+        【解析内容】<br>
+        右腕の長さ: {{ measure.right_arm_length }}<br>
+        左腕の長さ: {{ measure.left_arm_length }}<br>
+        右足の長さ: {{ measure.right_leg_length }}<br>
+        左足の長さ: {{ measure.left_leg_length }}<br>
+        膝から足首までの長さ: {{ measure.knee_ankle }}<br>
+        背中の長さ: {{ measure.back_length }}<br>
+        頭の傾き: {{ measure.head_angle }}<br>
+        肩の角度: {{ measure.shoulder_angle }}<br>
+        骨盤の角度: {{ measure.hip_angle }}<br>
+        首の付け根: {{ measure.base_neck }}<br>
+        首（首の凹みと付け根の幅）: {{ measure.neck_dent }}<br>
+        頭（後頭部と付け根の幅）: {{ measure.head_pos }}<br>
+        右耳から右肩までの長さ: {{ measure.right_shoulder_width }}<br>
+        左耳から左肩までの長さ: {{ measure.left_shoulder_width }}<br>
+        姿勢診断: {{ measure.posture }}<br>
+        解析画像:<br>
+        <img src="{{ measure.image1 }}" width="600"><br>
+        <img src="{{ measure.image2 }}" width="600"><br>
+    </p>
+    <p>
+        ※本メールに心当たりの無い場合は、恐れ入りますが 破棄していただけますよう、よろしくお願いいたします。<br>
+        ※本メールは送信専用メールアドレスから配信されています。このままご返信いただいてもお答えできませんのでご了承ください。<br>
+    </p>
+
+    <p>
+        ※LINEでもお問い合わせを受け付けております。<br>
+        {{ line_url }}<br>
+
+        --------------------------------------<br>
+        【Dormire運営事務局】<br>
+        Mail: {{ contact_email }}<br>
+        平日9:00〜17:00 受付（土・日・祝日を除く）<br>
+        --------------------------------------
+    </p>
+</body>
+
+</html>

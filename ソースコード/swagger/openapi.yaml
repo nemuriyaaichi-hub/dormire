@@ -1,0 +1,1376 @@
+openapi: 3.0.3
+info:
+  title: ねむりやAPI
+  version: 0.0.0
+  contact: {}
+  description: ねむりやAPI
+tags:
+  - name: auth
+    description: 認証関連
+  - name: recommends
+    description: レコメンド関連
+  - name: orders
+    description: オーダー関連
+  - name: measure
+    description: 計測関連
+paths:
+  /signin/:
+    post:
+      summary: サインイン
+      description: ユーザーのサインイン
+      tags:
+        - auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthUserSignin'
+      responses:
+        '200':
+          description: サインイン完了
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthUser'
+        '400':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthUserSigninError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security: []
+      operationId: signin
+  /recommends/:
+    post:
+      summary: おすすめの判定
+      description: ヒアリング及び計測データを基におすすめの判定を行う
+      tags:
+        - recommends
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecommendRequest'
+        description: ''
+      responses:
+        '201':
+          description: おすすめを提示
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecommendResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      security:
+        - token_auth: []
+      operationId: recommends
+  /orders/:
+    post:
+      summary: オーダー
+      description: 商品の注文を行う
+      tags:
+        - orders
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderRequest'
+      responses:
+        '201':
+          description: オーダー完了
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      security:
+        - token_auth: []
+      operationId: orders
+  /measure/:
+    post:
+      summary: 身体測定
+      description: 整体師モードによってVisionPoseでの測定のみを行う
+      tags:
+        - measure
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MeasureOnly'
+      responses:
+        '201':
+          description: 計測結果を提示
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeasureOnly'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      security:
+        - token_auth: []
+      operationId: measure
+components:
+  responses:
+    BadRequest:
+      description: BadRequest
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorMessage'
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorMessage'
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorMessage'
+    NotFound:
+      description: NotFound
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorMessage'
+    InternalServerError:
+      description: Internal Server Error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ServerErrorMessage'
+  schemas:
+    AuthUserToken:
+      description: ユーザー認証トークン
+      type: string
+      minLength: 40
+      maxLength: 40
+      example: 7e57166764fd248084928e1af2d19b1d3e21b016
+    AuthUser:
+      description: ログイントークンとユーザ情報
+      type: object
+      properties:
+        token:
+          $ref: '#/components/schemas/AuthUserToken'
+        user:
+          $ref: '#/components/schemas/User'
+    AuthUserSignin:
+      description: ユーザーサインイン時の入力項目
+      type: object
+      properties:
+        email:
+          $ref: '#/components/schemas/UserEmail'
+        password:
+          $ref: '#/components/schemas/UserPassword'
+      required:
+        - email
+        - password
+    AuthUserSigninError:
+      description: ユーザーサインイン時のバリデーションエラーメッセージ
+      type: object
+      properties:
+        non_field_errors:
+          $ref: '#/components/schemas/ValidationErrorMessages'
+        email:
+          $ref: '#/components/schemas/ValidationErrorMessages'
+        password:
+          $ref: '#/components/schemas/ValidationErrorMessages'
+    User:
+      description: ユーザー情報
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/UserId'
+        username:
+          $ref: '#/components/schemas/UserName'
+        email:
+          $ref: '#/components/schemas/UserEmail'
+        password:
+          $ref: '#/components/schemas/UserPassword'
+        type:
+          $ref: '#/components/schemas/UserType'
+    UserId:
+      description: ユーザーID（uuid）
+      type: string
+      format: uuid
+      readOnly: true
+      example: 6cbb962a-d928-5e6c-70f1-8194d612a0e7
+    UserName:
+      description: ユーザー名
+      type: string
+      minLength: 4
+      maxLength: 64
+      example: nemuriyataro
+    UserType:
+      type: string
+      description: |-
+        ユーザー種類（管理者・サロン・ふるさと納税・クラウドファンディング）
+        ふるさと納税・クラウドファンディングユーザーは，/measure/エンドポイントを利用できない
+      title: UserType
+      example: furusato_tax
+      enum:
+        - admin
+        - salon
+        - furusato_tax
+        - crowd_funding
+      readOnly: true
+    UserEmail:
+      description: ユーザーのメールアドレス
+      type: string
+      example: nemuriya@example.com
+    UserPassword:
+      description: ユーザーのパスワード
+      type: string
+      format: password
+      writeOnly: true
+      example: QGGxIMPC
+    RecommendRequest:
+      description: おすすめ情報リクエスト
+      type: object
+      properties:
+        sex:
+          $ref: '#/components/schemas/HearingSex'
+        age:
+          $ref: '#/components/schemas/HearingAge'
+        height:
+          $ref: '#/components/schemas/HearingHeight'
+        weight:
+          $ref: '#/components/schemas/HearingWeight'
+        both:
+          $ref: '#/components/schemas/HearingBoth'
+        hearing1:
+          $ref: '#/components/schemas/Hearing1'
+        hearing2:
+          $ref: '#/components/schemas/Hearing2'
+        hearing3:
+          $ref: '#/components/schemas/Hearing3'
+        hearing4:
+          $ref: '#/components/schemas/Hearing4'
+        hearing5:
+          $ref: '#/components/schemas/Hearing5'
+        hearing6:
+          $ref: '#/components/schemas/Hearing6'
+        hearing7:
+          $ref: '#/components/schemas/Hearing7'
+        hearing8:
+          $ref: '#/components/schemas/Hearing8'
+        hearing9:
+          $ref: '#/components/schemas/Hearing9'
+        hearing10:
+          $ref: '#/components/schemas/Hearing10'
+        hearing11:
+          $ref: '#/components/schemas/Hearing11'
+        hearing12:
+          $ref: '#/components/schemas/Hearing12'
+        hearing13:
+          $ref: '#/components/schemas/Hearing13'
+        hearing14:
+          $ref: '#/components/schemas/Hearing14'
+        hearing15:
+          $ref: '#/components/schemas/Hearing15'
+        hearing16:
+          $ref: '#/components/schemas/Hearing16'
+        hearing17:
+          $ref: '#/components/schemas/Hearing17'
+        hearing18:
+          $ref: '#/components/schemas/Hearing18'
+        hearing19:
+          $ref: '#/components/schemas/Hearing19'
+        hearing20:
+          $ref: '#/components/schemas/Hearing20'
+        hearing21:
+          $ref: '#/components/schemas/Hearing21'
+        hearing22:
+          $ref: '#/components/schemas/Hearing22'
+        hearing23:
+          $ref: '#/components/schemas/Hearing23'
+        hearing24:
+          $ref: '#/components/schemas/Hearing24'
+        hearing25:
+          $ref: '#/components/schemas/Hearing25'
+        hearing26:
+          $ref: '#/components/schemas/Hearing26'
+        hearing27:
+          $ref: '#/components/schemas/Hearing27'
+        hearing28:
+          $ref: '#/components/schemas/Hearing28'
+        hearing29:
+          $ref: '#/components/schemas/Hearing29'
+        hearing30:
+          $ref: '#/components/schemas/Hearing30'
+        vpData:
+          $ref: '#/components/schemas/VpData'
+    HearingSex:
+      description: 性別
+      type: integer
+      example: 1
+    HearingAge:
+      description: 年齢
+      type: integer
+      example: 30
+    HearingHeight:
+      description: 身長
+      type: number
+      format: float
+      example: 170.3
+    HearingWeight:
+      description: 体重
+      type: number
+      format: float
+      example: 58.5
+    HearingBoth:
+      description: 枕とマットレス同時購入
+      type: boolean
+      example: false
+    Hearing1:
+      description: ヒアリング項目１
+      type: object
+      properties:
+        question:
+          description: 質問１
+          type: string
+          example: よく眠る姿勢
+        answer:
+          description: 回答１
+          type: string
+          example: 仰向け
+    Hearing2:
+      description: ヒアリング項目２
+      type: object
+      properties:
+        question:
+          description: 質問２
+          type: string
+          example: よく眠れていますか？
+        answer:
+          description: 回答２
+          type: integer
+          example: 1
+    Hearing3:
+      description: ヒアリング項目３
+      type: object
+      properties:
+        question:
+          description: 質問３
+          type: string
+          example: 布団に入る時間
+        answer:
+          description: 回答３
+          type: string
+          example: 不規則
+    Hearing4:
+      description: ヒアリング項目４
+      type: object
+      properties:
+        question:
+          description: 質問４
+          type: string
+          example: 起きる時間
+        answer:
+          description: 回答４
+          type: string
+          example: 不規則
+    Hearing5:
+      description: ヒアリング項目５
+      type: object
+      properties:
+        question:
+          description: 質問５
+          type: string
+          example: 寝入りまでの時間
+        answer:
+          description: 回答５
+          type: string
+          example: 15分以内
+    Hearing6:
+      description: ヒアリング項目６
+      type: object
+      properties:
+        question:
+          description: 質問６
+          type: string
+          example: 平日の平均睡眠時間
+        answer:
+          description: 回答６
+          type: string
+          example: 4時間未満
+    Hearing7:
+      description: ヒアリング項目７
+      type: object
+      properties:
+        question:
+          description: 質問７
+          type: string
+          example: 途中で起きますか
+        answer:
+          description: 回答７
+          type: string
+          example: ほとんど起きない
+    Hearing8:
+      description: ヒアリング項目８
+      type: object
+      properties:
+        question:
+          description: 質問８
+          type: string
+          example: 夜中にトイレに行く
+        answer:
+          description: 回答８
+          type: string
+          example: ほとんど行かない
+    Hearing9:
+      description: ヒアリング項目９
+      type: object
+      properties:
+        question:
+          description: 質問９
+          type: string
+          example: 昼間に眠気を感じることがある
+        answer:
+          description: 回答９
+          type: integer
+          example: 1
+    Hearing10:
+      description: ヒアリング項目１０
+      type: object
+      properties:
+        question:
+          description: 質問１０
+          type: string
+          example: 頭痛
+        answer:
+          description: 回答１０
+          type: integer
+          example: 1
+    Hearing11:
+      description: ヒアリング項目１１
+      type: object
+      properties:
+        question:
+          description: 質問１１
+          type: string
+          example: 首が痛いことがある
+        answer:
+          description: 回答１１
+          type: integer
+          example: 1
+    Hearing12:
+      description: ヒアリング項目１２
+      type: object
+      properties:
+        question:
+          description: 質問１２
+          type: string
+          example: 首のどちらが痛いですか
+        answer:
+          description: 回答１２
+          type: string
+          example: 左右
+    Hearing13:
+      description: ヒアリング項目１３
+      type: object
+      properties:
+        question:
+          description: 質問１３
+          type: string
+          example: 肩が痛いことがある
+        answer:
+          description: 回答１３
+          type: integer
+          example: 1
+    Hearing14:
+      description: ヒアリング項目１４
+      type: object
+      properties:
+        question:
+          description: 質問１４
+          type: string
+          example: 肩のどちらがい痛いですか
+        answer:
+          description: 回答１４
+          type: string
+          example: 左右
+    Hearing15:
+      description: ヒアリング項目１５
+      type: object
+      properties:
+        question:
+          description: 質問１５
+          type: string
+          example: 腰が痛いことがある
+        answer:
+          description: 回答１５
+          type: integer
+          example: 1
+    Hearing16:
+      description: ヒアリング項目１６
+      type: object
+      properties:
+        question:
+          description: 質問１６
+          type: string
+          example: 腰のどちらが痛いですか
+        answer:
+          description: 回答１６
+          type: string
+          example: 左右
+    Hearing17:
+      description: ヒアリング項目１７
+      type: object
+      properties:
+        question:
+          description: 質問１７
+          type: string
+          example: 冷え性がある
+        answer:
+          description: 回答１７
+          type: integer
+          example: 1
+    Hearing18:
+      description: ヒアリング項目１８
+      type: object
+      properties:
+        question:
+          description: 質問１８
+          type: string
+          example: いびきがある
+        answer:
+          description: 回答１８
+          type: string
+          example: よくある
+    Hearing19:
+      description: ヒアリング項目１９
+      type: object
+      properties:
+        question:
+          description: 質問１９
+          type: string
+          example: 睡眠薬について
+        answer:
+          description: 回答１９
+          type: string
+          example: よく使う
+    Hearing20:
+      description: ヒアリング項目２０
+      type: object
+      properties:
+        question:
+          description: 質問２０
+          type: string
+          example: 反り腰がある
+        answer:
+          description: 回答２０
+          type: string
+          example: ある
+    Hearing21:
+      description: ヒアリング項目２１
+      type: object
+      properties:
+        question:
+          description: 質問２１
+          type: string
+          example: 猫背がある
+        answer:
+          description: 回答２１
+          type: string
+          example: ある
+    Hearing22:
+      description: ヒアリング項目２２
+      type: object
+      properties:
+        question:
+          description: 質問２２
+          type: string
+          example: 現在の寝方
+        answer:
+          description: 回答２２
+          type: string
+          example: ベッド
+    Hearing23:
+      description: ヒアリング項目２３
+      type: object
+      properties:
+        question:
+          description: 質問２３
+          type: string
+          example: 現在使用のマットレスの柔らかさ
+        answer:
+          description: 回答２３
+          type: string
+          example: かなり柔らかい
+    Hearing24:
+      description: ヒアリング項目２４
+      type: object
+      properties:
+        question:
+          description: 質問２４
+          type: string
+          example: 好みのマットレスの柔らかさ
+        answer:
+          description: 回答２４
+          type: string
+          example: かなり柔らかい
+    Hearing25:
+      description: ヒアリング項目２５
+      type: object
+      properties:
+        question:
+          description: 質問２５
+          type: string
+          example: 現在のまくらの使用年数
+        answer:
+          description: 回答２５
+          type: string
+          example: 1年未満
+    Hearing26:
+      description: ヒアリング項目２６
+      type: object
+      properties:
+        question:
+          description: 質問２６
+          type: string
+          example: 現在のマットレスの使用年数
+        answer:
+          description: 回答２６
+          type: string
+          example: 1年未満
+    Hearing27:
+      description: ヒアリング項目２７
+      type: object
+      properties:
+        question:
+          description: 質問２７
+          type: string
+          example: 好みの枕の高さ
+        answer:
+          description: 回答２７
+          type: string
+          example: 高め
+    Hearing28:
+      description: ヒアリング項目２８
+      type: object
+      properties:
+        question:
+          description: 質問２８
+          type: string
+          example: 首元はしっかり支えたい
+        answer:
+          description: 回答２８
+          type: string
+          example: 支えたい
+    Hearing29:
+      description: ヒアリング項目２９
+      type: object
+      properties:
+        question:
+          description: 質問２９
+          type: string
+          example: 好みの枕の素材
+        answer:
+          description: 回答２９
+          type: string
+          example: ソフトパイプ
+    Hearing30:
+      description: ヒアリング項目３０
+      type: object
+      properties:
+        question:
+          description: 質問３０
+          type: string
+          example: 自由記入欄
+        answer:
+          description: 回答３０
+          type: string
+          maxLength: 200
+          example: 特になし
+    MeasureOnly:
+      description: VisionPose計測データ（整体師モード）
+      type: object
+      x-stoplight:
+        id: 0d797a2f05092
+      properties:
+        name:
+          $ref: '#/components/schemas/VpCustomerName'
+        kana:
+          $ref: '#/components/schemas/VpCustomerKana'
+        phoneNumber:
+          $ref: '#/components/schemas/VpCustomerPhone'
+        email:
+          $ref: '#/components/schemas/VpCustomerEmail'
+        postCode:
+          $ref: '#/components/schemas/VpCustomerPostCode'
+        address:
+          $ref: '#/components/schemas/VpCustomerAddress'
+        building:
+          $ref: '#/components/schemas/VpCustomerBuilding'
+        status:
+          $ref: '#/components/schemas/Status'
+        rightArmLength:
+          $ref: '#/components/schemas/VpDataRightArmLength'
+        leftArmLength:
+          $ref: '#/components/schemas/VpDataLeftArmLength'
+        rightLegLength:
+          $ref: '#/components/schemas/VpDataRightLegLength'
+        leftLegLength:
+          $ref: '#/components/schemas/VpDataLeftLegLength'
+        kneeAnkle:
+          $ref: '#/components/schemas/VpDataKneeAnkle'
+        backLength:
+          $ref: '#/components/schemas/VpDataBackLength'
+        backAngle:
+          $ref: '#/components/schemas/VpDataBackAngle'
+        headAngle:
+          $ref: '#/components/schemas/VpDataHeadAngle'
+        shoulderAngle:
+          $ref: '#/components/schemas/VpDataShoulderAngle'
+        hipAngle:
+          $ref: '#/components/schemas/VpDataHipAngle'
+        neckBase:
+          $ref: '#/components/schemas/VpDataNeckBase'
+        neckWidth:
+          $ref: '#/components/schemas/VpDataNeckWidth'
+        headWidth:
+          $ref: '#/components/schemas/VpDataHeadWidth'
+        posture:
+          $ref: '#/components/schemas/VpDataPosture'
+        neckHip:
+          $ref: '#/components/schemas/VpDataNeckHip'
+        hipKnee:
+          $ref: '#/components/schemas/VpDataHipKnee'
+        rightShoulderWidth:
+          $ref: '#/components/schemas/VpDataRightShoulderWidth'
+        leftShoulderWidth:
+          $ref: '#/components/schemas/VpDataLeftShoulderWidth'
+        rightEarShoulder:
+          $ref: '#/components/schemas/VpDataRightEarShoulder'
+        leftEarShoulder:
+          $ref: '#/components/schemas/VpDataLeftEarShoulder'
+        image1:
+          $ref: '#/components/schemas/VpDataImage'
+        image2:
+          $ref: '#/components/schemas/VpDataImage'
+    VpData:
+      description: VisionPose計測データ
+      type: object
+      properties:
+        rightArmLength:
+          $ref: '#/components/schemas/VpDataRightArmLength'
+        leftArmLength:
+          $ref: '#/components/schemas/VpDataLeftArmLength'
+        rightLegLength:
+          $ref: '#/components/schemas/VpDataRightLegLength'
+        leftLegLength:
+          $ref: '#/components/schemas/VpDataLeftLegLength'
+        kneeAnkle:
+          $ref: '#/components/schemas/VpDataKneeAnkle'
+        backLength:
+          $ref: '#/components/schemas/VpDataBackLength'
+        backAngle:
+          $ref: '#/components/schemas/VpDataBackAngle'
+        headAngle:
+          $ref: '#/components/schemas/VpDataHeadAngle'
+        shoulderAngle:
+          $ref: '#/components/schemas/VpDataShoulderAngle'
+        hipAngle:
+          $ref: '#/components/schemas/VpDataHipAngle'
+        neckBase:
+          $ref: '#/components/schemas/VpDataNeckBase'
+        neckWidth:
+          $ref: '#/components/schemas/VpDataNeckWidth'
+        headWidth:
+          $ref: '#/components/schemas/VpDataHeadWidth'
+        posture:
+          $ref: '#/components/schemas/VpDataPosture'
+        neckHip:
+          $ref: '#/components/schemas/VpDataNeckHip'
+        hipKnee:
+          $ref: '#/components/schemas/VpDataHipKnee'
+        rightShoulderWidth:
+          $ref: '#/components/schemas/VpDataRightShoulderWidth'
+        leftShoulderWidth:
+          $ref: '#/components/schemas/VpDataLeftShoulderWidth'
+        rightEarShoulder:
+          $ref: '#/components/schemas/VpDataRightEarShoulder'
+        leftEarShoulder:
+          $ref: '#/components/schemas/VpDataLeftEarShoulder'
+        image1:
+          $ref: '#/components/schemas/VpDataImage'
+        image2:
+          $ref: '#/components/schemas/VpDataImage'
+      writeOnly: true
+    VpDataRightArmLength:
+      description: 右腕の長さ
+      type: number
+      format: double
+      example: 10.1
+      writeOnly: true
+    VpDataLeftArmLength:
+      description: 左腕の長さ
+      type: number
+      format: double
+      example: 10.1
+      writeOnly: true
+    VpDataRightLegLength:
+      description: 右足の長さ
+      type: number
+      format: double
+      example: 10.1
+      writeOnly: true
+    VpDataLeftLegLength:
+      description: 左足の長さ
+      type: number
+      format: double
+      example: 10.1
+      writeOnly: true
+    VpDataKneeAnkle:
+      type: number
+      description: 膝から足首までの長さ
+      format: double
+      example: 30.1
+      writeOnly: true
+    VpDataBackLength:
+      description: 背中の長さ
+      type: number
+      format: double
+      example: 10.1
+      writeOnly: true
+    VpDataBackAngle:
+      description: 背中の角度
+      type: number
+      format: double
+      example: 10.1
+      writeOnly: true
+    VpDataHeadAngle:
+      description: 頭の傾き
+      type: number
+      format: double
+      example: 10.1
+      writeOnly: true
+    VpDataShoulderAngle:
+      description: 肩の角度
+      type: number
+      format: double
+      example: 10.1
+      writeOnly: true
+    VpDataHipAngle:
+      description: 骨盤の角度
+      type: number
+      format: double
+      example: 10.1
+      writeOnly: true
+    VpDataNeckBase:
+      description: 首の付け根
+      type: number
+      format: double
+      example: 10.1
+      writeOnly: true
+    VpDataNeckWidth:
+      description: 首（首の凹みと付け根の幅）
+      type: number
+      format: double
+      example: 10.1
+      writeOnly: true
+    VpDataHeadWidth:
+      description: 頭（後頭部と付け根の幅）
+      type: number
+      format: double
+      example: 10.1
+      writeOnly: true
+    VpDataPosture:
+      description: 姿勢タイプ
+      type: string
+      example: W
+      writeOnly: true
+    VpDataNeckHip:
+      type: number
+      description: 首から骨盤中央までの長さ
+      format: double
+      example: 30.1
+      writeOnly: true
+    VpDataHipKnee:
+      type: number
+      description: 骨盤中央から膝までの長さ
+      format: double
+      example: 50.1
+      writeOnly: true
+    VpDataRightShoulderWidth:
+      type: number
+      description: 右半身の肩幅
+      format: double
+      example: 30.1
+      writeOnly: true
+    VpDataLeftShoulderWidth:
+      type: number
+      description: 左半身の肩幅
+      format: double
+      example: 30.1
+      writeOnly: true
+    VpDataRightEarShoulder:
+      type: number
+      description: 右半身の耳から肩までの長さ
+      format: double
+      example: 30.1
+      writeOnly: true
+    VpDataLeftEarShoulder:
+      type: number
+      description: 左半身の耳から肩までの長さ
+      format: double
+      example: 30.1
+      writeOnly: true
+    VpDataImage:
+      type: string
+      description: 計測画像データ
+      writeOnly: true
+      example: 'data:image/png;base64,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'
+    RecommendResponse:
+      description: おすすめ情報レスポンス
+      type: object
+      readOnly: true
+      properties:
+        pillow:
+          $ref: '#/components/schemas/RecommendPillow'
+        mattress:
+          $ref: '#/components/schemas/RecommendMattress'
+    RecommendPillow:
+      description: おすすめ枕情報
+      type: object
+      readOnly: true
+      properties:
+        id:
+          $ref: '#/components/schemas/RecommendPillowId1'
+        sheet:
+          $ref: '#/components/schemas/RecommendPillowSheet'
+        position1:
+          $ref: '#/components/schemas/RecommendPillowPos1'
+        position2:
+          $ref: '#/components/schemas/RecommendPillowPos2'
+        position3:
+          $ref: '#/components/schemas/RecommendPillowPos3'
+        position4:
+          $ref: '#/components/schemas/RecommendPillowPos4'
+        position5:
+          $ref: '#/components/schemas/RecommendPillowPos5'
+        position6:
+          $ref: '#/components/schemas/RecommendPillowPos6'
+        diffPosition1:
+          $ref: '#/components/schemas/RecommendDiffPillowPos1'
+        diffPosition2:
+          $ref: '#/components/schemas/RecommendDiffPillowPos2'
+        diffPosition3:
+          $ref: '#/components/schemas/RecommendDiffPillowPos3'
+        diffPosition4:
+          $ref: '#/components/schemas/RecommendDiffPillowPos4'
+        diffPosition5:
+          $ref: '#/components/schemas/RecommendDiffPillowPos5'
+        diffPosition6:
+          $ref: '#/components/schemas/RecommendDiffPillowPos6'
+    RecommendPillowId1:
+      description: レコメンド枕ID（uuid）
+      type: string
+      format: uuid
+      example: 02bd0519-f547-65b9-2d47-0f9dafb9af95
+    RecommendPillowId2:
+      description: レコメンド枕ID（uuid）
+      type: string
+      format: uuid
+      example: b95bf33a-755a-3472-2c70-55ea6cdc9dc8
+    RecommendPillowSheet:
+      description: シート
+      type: integer
+      example: 1
+    RecommendPillowPos1:
+      description: 位置１
+      type: integer
+      example: 100
+    RecommendPillowPos2:
+      description: 位置２
+      type: integer
+      example: 200
+    RecommendPillowPos3:
+      description: 位置３
+      type: integer
+      example: 150
+    RecommendPillowPos4:
+      description: 位置４
+      type: integer
+      example: 400
+    RecommendPillowPos5:
+      description: 位置５
+      type: integer
+      example: 500
+    RecommendPillowPos6:
+      description: 位置６
+      type: integer
+      example: 600
+    RecommendDiffPillowPos1:
+      description: 差分位置１
+      type: integer
+      example: -100
+    RecommendDiffPillowPos2:
+      description: 差分位置２
+      type: integer
+      example: -200
+    RecommendDiffPillowPos3:
+      description: 差分位置３
+      type: integer
+      example: -150
+    RecommendDiffPillowPos4:
+      description: 差分位置４
+      type: integer
+      example: -400
+    RecommendDiffPillowPos5:
+      description: 差分位置５
+      type: integer
+      example: -500
+    RecommendDiffPillowPos6:
+      description: 差分位置６
+      type: integer
+      example: -600
+    RecommendMattress:
+      description: おすすめマットレス情報
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/RecommendMattressId1'
+        position1:
+          $ref: '#/components/schemas/RecommendMattressPos1'
+        position2:
+          $ref: '#/components/schemas/RecommendMattressPos2'
+        position3:
+          $ref: '#/components/schemas/RecommendMattressPos3'
+        position4:
+          $ref: '#/components/schemas/RecommendMattressPos4'
+        position5:
+          $ref: '#/components/schemas/RecommendMattressPos5'
+        position6:
+          $ref: '#/components/schemas/RecommendMattressPos6'
+        supportPad1P:
+          $ref: '#/components/schemas/RecommendMattressSupportPadP'
+        supportPad1N:
+          $ref: '#/components/schemas/RecommendMatressSupportPadN'
+        supportPad2P:
+          $ref: '#/components/schemas/RecommendMattressSupportPadP'
+        supportPad2N:
+          $ref: '#/components/schemas/RecommendMatressSupportPadN'
+        supportPad3P:
+          $ref: '#/components/schemas/RecommendMattressSupportPadP'
+        supportPad3N:
+          $ref: '#/components/schemas/RecommendMatressSupportPadN'
+        supportPad4P:
+          $ref: '#/components/schemas/RecommendMattressSupportPadP'
+        supportPad4N:
+          $ref: '#/components/schemas/RecommendMatressSupportPadN'
+      readOnly: true
+    RecommendMattressId1:
+      description: レコメンドマットレスID（uuid）
+      type: string
+      format: uuid
+      example: fc5b074a-6fbb-f391-b30c-76a6bbf736b3
+    RecommendMattressId2:
+      description: レコメンドマットレスID（uuid）
+      type: string
+      format: uuid
+      example: 8ec1d7f2-29f2-c492-c2df-2c1a4429ccca
+    RecommendMattressPos1:
+      description: 位置１
+      type: string
+      example: white
+    RecommendMattressPos2:
+      description: 位置２
+      type: string
+      example: darkblue
+    RecommendMattressPos3:
+      description: 位置３
+      type: string
+      example: yellow
+    RecommendMattressPos4:
+      description: 位置４
+      type: string
+      example: green
+    RecommendMattressPos5:
+      description: 位置５
+      type: string
+      example: orange
+    RecommendMattressPos6:
+      description: 位置６
+      type: string
+      example: black
+    RecommendMattressSupportPadP:
+      type: number
+      description: サポートパッドの位置
+      example: 3
+      minimum: 1
+      maximum: 6
+    RecommendMatressSupportPadN:
+      type: number
+      description: サポートパッドの位置の中の番号
+      example: 2
+      minimum: 1
+      maximum: 4
+    OrderRequest:
+      description: オーダーリクエスト
+      type: object
+      properties:
+        customer:
+          $ref: '#/components/schemas/Customer'
+        pillow1:
+          $ref: '#/components/schemas/OrderPillow1'
+        pillow2:
+          $ref: '#/components/schemas/OrderPillow2'
+        mattress:
+          $ref: '#/components/schemas/OrderMattress'
+    Customer:
+      description: 顧客情報
+      type: object
+      properties:
+        name:
+          $ref: '#/components/schemas/CustomerName'
+        kana:
+          $ref: '#/components/schemas/CustomerKana'
+        phoneNumber:
+          $ref: '#/components/schemas/CustomerPhone'
+        email:
+          $ref: '#/components/schemas/CustomerEmail'
+        postCode:
+          $ref: '#/components/schemas/CustomerPostCode'
+        address:
+          $ref: '#/components/schemas/CustomerAddress'
+        building:
+          $ref: '#/components/schemas/CustomerBuilding'
+    CustomerName:
+      description: 顧客名
+      type: string
+      example: ねむりや太郎
+      maxLength: 64
+    CustomerKana:
+      description: 顧客名（カナ）
+      type: string
+      example: ネムリヤタロウ
+      maxLength: 64
+    CustomerPhone:
+      description: 顧客の電話番号
+      type: string
+      example: '08012345678'
+    CustomerEmail:
+      description: 顧客のメールアドレス
+      type: string
+      example: nemuriya@example.com
+    CustomerPostCode:
+      description: 顧客の郵便番号
+      type: string
+      example: '1234567'
+      maxLength: 8
+    CustomerAddress:
+      description: 顧客の住所
+      type: string
+      example: 三重県鈴鹿市高岡台3-276-9
+    CustomerBuilding:
+      description: 顧客の建物名
+      type: string
+      nullable: true
+      example: そよかぜビル
+    VpCustomerName:
+      description: 顧客名
+      nullable: true
+      type: string
+      example: ねむりや太郎
+      maxLength: 64
+      writeOnly: true
+    VpCustomerKana:
+      description: 顧客名（カナ）
+      nullable: true
+      type: string
+      example: ネムリヤタロウ
+      maxLength: 64
+      writeOnly: true
+    VpCustomerPhone:
+      description: 顧客の電話番号
+      nullable: true
+      type: string
+      example: '08012345678'
+      writeOnly: true
+    VpCustomerEmail:
+      description: 顧客のメールアドレス
+      nullable: true
+      type: string
+      example: nemuriya@example.com
+      writeOnly: true
+    VpCustomerPostCode:
+      description: 顧客の郵便番号
+      type: string
+      example: '1234567'
+      maxLength: 8
+      nullable: true
+      writeOnly: true
+    VpCustomerAddress:
+      description: 顧客の住所
+      type: string
+      nullable: true
+      example: 三重県鈴鹿市高岡台3-276-9
+      writeOnly: true
+    VpCustomerBuilding:
+      description: 顧客の建物名
+      type: string
+      nullable: true
+      example: そよかぜビル
+      writeOnly: true
+    OrderPillow1:
+      description: 注文枕情報１
+      type: object
+      nullable: true
+      properties:
+        recommendPillow:
+          $ref: '#/components/schemas/RecommendPillowId1'
+        material:
+          $ref: '#/components/schemas/OrderPillowMaterial'
+        coverMaterial:
+          $ref: '#/components/schemas/OrderPillowCoverMaterial'
+        coverColor1:
+          $ref: '#/components/schemas/OrderPillowCoverColorNumber'
+        coverColor2:
+          $ref: '#/components/schemas/OrderPillowCoverColorNumber'
+        coverColor3:
+          $ref: '#/components/schemas/OrderPillowCoverColorNumber'
+    OrderPillow2:
+      description: 注文枕情報２
+      type: object
+      nullable: true
+      properties:
+        recommendPillow:
+          $ref: '#/components/schemas/RecommendPillowId2'
+        material:
+          $ref: '#/components/schemas/OrderPillowMaterial'
+    OrderPillowSize:
+      description: 注文枕サイズ
+      type: string
+      example: クイーン
+    OrderPillowMaterial:
+      description: 注文枕素材
+      type: string
+      example: ソフトパイプ
+    OrderPillowCoverMaterial:
+      description: 注文枕カバー素材
+      type: string
+      nullable: true
+      example: 綿
+    OrderPillowCoverColorNumber:
+      description: 注文枕カバー色個数
+      type: integer
+      maximum: 5
+      nullable: true
+      example: 1
+    OrderMattress:
+      description: 注文マットレス情報
+      type: object
+      nullable: true
+      properties:
+        recommendMattress1:
+          $ref: '#/components/schemas/RecommendMattressId1'
+        recommendMattress2:
+          $ref: '#/components/schemas/RecommendMattressId2'
+        size:
+          $ref: '#/components/schemas/OrderMattressSize'
+        thickness:
+          $ref: '#/components/schemas/OrderMattressThickness'
+        coverMaterial:
+          $ref: '#/components/schemas/OrderMattressCoverMaterial'
+        coverColor1:
+          $ref: '#/components/schemas/OrderMattressCoverColor1Number'
+        coverColor2:
+          $ref: '#/components/schemas/OrderMattressCoverColor2Number'
+        coverColor3:
+          $ref: '#/components/schemas/OrderMattressCoverColor3Number'
+    OrderMattressSize:
+      description: 注文マットレスサイズ
+      type: string
+      example: クイーン
+    OrderMattressThickness:
+      description: 注文マットレス厚み
+      type: integer
+      example: 120
+    OrderMattressCoverMaterial:
+      description: 注文マットレスカバー素材
+      type: string
+      nullable: true
+      example: 綿
+    OrderMattressCoverColor1Number:
+      type: integer
+      description: 注文マットレスカバー色（グレー）個数
+      example: 2
+      nullable: true
+    OrderMattressCoverColor2Number:
+      type: integer
+      description: 注文マットレスカバー色（ベージュ）個数
+      example: 2
+      nullable: true
+    OrderMattressCoverColor3Number:
+      type: integer
+      description: 注文マットレスカバー色（ピンク）個数
+      example: 2
+      nullable: true
+    OrderResponse:
+      description: オーダーレスポンス
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/OrderId'
+        status:
+          $ref: '#/components/schemas/Status'
+    OrderId:
+      description: オーダーID（uuid）
+      type: string
+      format: uuid
+      example: 9796bf4d-c698-aaaf-f2be-465cedb7eb54
+    Status:
+      description: ステータスメッセージ
+      readOnly: true
+      type: string
+      example: OK
+    ErrorMessage:
+      type: object
+      properties:
+        detail:
+          type: string
+    ServerErrorMessage:
+      type: object
+      properties:
+        error:
+          type: string
+    ValidationErrorMessages:
+      description: 入力エラーメッセージ
+      type: array
+      items:
+        type: string
+        example: バリデーションエラーメッセージ
+  securitySchemes:
+    token_auth:
+      description: |-
+        トークン認証
+        頭には'Token 'が必要
+      type: apiKey
+      in: header
+      name: Authorization
+servers:
+  - url: 'http://localhost:8000'
+    description: 開発用

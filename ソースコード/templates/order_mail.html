@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html jang="ja">
+
+<body>
+  <p>
+    {{ order.customer.name }} 様<br>
+    Dormireをご利用頂きまして、ありがとうございます。<br>
+    Dormire運営事務局です。<br>
+  </p>
+  <p>
+    購入手続きを受け付けました。<br>
+    ご登録いただいた情報は下記の通りです。<br>
+  </p>
+  <p>
+    【ユーザー情報】<br>
+    お名前（漢字）: {{ order.customer.name }}<br>
+    お名前（カナ）: {{ order.customer.kana }}<br>
+    電話番号 : {{ order.customer.phone_number }}<br>
+    メールアドレス : {{ order.customer.email }}<br>
+    郵便番号（ハイフンなし7桁） : {{ order.customer.post_code }}<br>
+    住所 : {{ order.customer.address }}<br>
+    {% if order.customer.building %}
+    建物名 : {{ order.customer.building }}<br>
+    {% endif %}
+  </p>
+
+  <p>
+    【商品内容】<br>
+    {% if order.pillow_order1 and not order.mat_order %}
+    {% comment %} 枕のみ {% endcomment %}
+    まくら<br>
+    マットレスの厚み: マットレスの選択なし<br>
+    マットレスのサイズ: マットレスの選択なし<br>
+    利用人数: 1人<br>
+    まくらの素材: {{ order.pillow_order1.material }}<br>
+    オーダーまくらカバーの個数: {{ cover_count }}個<br>
+    オーダーマットレスカバーの個数: マットレスの選択なし<br>
+
+    {% elif not order.pillow_order1 and order.mat_order %}
+    {% comment %} マットレスのみ {% endcomment %}
+    マットレス<br>
+    マットレスの厚み: {{ order.mat_order.thickness }}<br>
+    マットレスのサイズ: {{ order.mat_order.size }}<br>
+    {% if order.hearing2 %}<br>
+    利用人数: 2人<br>
+    {% else %}
+    利用人数: 1人<br>
+    {% endif %}
+    まくらの素材: まくらの選択なし<br>
+    オーダーまくらカバーの個数: まくらの選択なし<br>
+    {% if order.mat_order.cover_count != 0 %}
+    オーダーマットレスカバーの個数: {{ order.mat_order.cover_count }}個<br>
+    {% else %}
+    オーダーマットレスカバーの個数: カバーの選択なし<br>
+    {% endif %}
+
+    {% elif order.pillow_order1 and order.mat_order %}
+    {% comment %} マットレスとまくら {% endcomment %}
+    両方<br>
+    マットレスの厚み: {{ order.mat_order.thickness }}<br>
+    マットレスのサイズ: {{ order.mat_order.size }}<br>
+    {% if order.hearing1 and order.hearing2 %}
+    {% comment %} 2人 {% endcomment %}
+    利用人数: 2人<br>
+    まくらの素材: {{ order.pillow_order1.material }}, {{ order.pillow_order2.material }}<br>
+    オーダーまくらカバーの個数: {{ cover_count_duo }}個<br>
+    {% else %}
+    {% comment %} 1人 {% endcomment %}
+    利用人数: 1人<br>
+    まくらの素材: {{ order.pillow_order1.material }}<br>
+    オーダーまくらカバーの個数: {{ cover_count }}個<br>
+    {% endif %}
+    {% if order.mat_order.cover_count %}
+    オーダーマットレスカバーの個数: {{ order.mat_order.cover_count }}個<br>
+    {% else %}
+    オーダーマットレスカバーの個数: カバーの選択なし<br>
+    {% endif %}
+    {% endif %}
+  </p>
+  <p>
+    ※本メールに心当たりの無い場合は、恐れ入りますが 破棄していただけますよう、よろしくお願いいたします。<br>
+    ※本メールは送信専用メールアドレスから配信されています。このままご返信いただいてもお答えできませんのでご了承ください<br>
+  </p>
+  <p>
+    ※LINEでもお問い合わせを受け付けております。<br>
+    {{ line_url }}<br>
+  </p>
+  <p>
+    --------------------------------------<br>
+    【Dormire運営事務局】<br>
+    Mail: {{ contact_email }}<br>
+    平日9:00〜17:00 受付（土・日・祝日を除く）<br>
+    --------------------------------------
+  </p>
+</body>
+
+</html>

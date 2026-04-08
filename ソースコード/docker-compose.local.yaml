@@ -1,0 +1,74 @@
+version: '3.8'
+
+volumes:
+  nemuriya-db-data:
+  nemuriya-minio-data:
+
+
+services:
+  db:
+    container_name: nemuriya_db
+    image: postgres:14
+    volumes:
+      - nemuriya-db-data:/var/lib/postgresql/data
+    env_file:
+      - .env
+    healthcheck:
+      test: pg_isready -U ${POSTGRES_USER}
+      interval: 1s
+      timeout: 1s
+      retries: 40
+      start_period: 1s
+
+  api:
+    container_name: nemuriya_api
+    build: .
+    volumes:
+      - .:/code
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: curl -f http://localhost:8000/health
+      interval: 10s
+      timeout: 1s
+      start_period: 5s
+
+  minio:
+    container_name: nemuriya_minio
+    image: minio/minio
+    volumes:
+      - nemuriya-minio-data:/data
+      - ./minio/config:/root/.minio
+    ports:
+      - ${MINIO_CLIENT_PORT:-9000}:9000
+      - ${MINIO_CLIENT_CONSOLE_PORT:-9001}:9001
+    env_file:
+      - .env
+    environment:
+      MINIO_ROOT_USER: ${AWS_S3_ACCESS_KEY_ID}
+      MINIO_ROOT_PASSWORD: ${AWS_S3_SECRET_ACCESS_KEY}
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: curl -f http://localhost:9000/minio/health/live
+      interval: 5s
+      timeout: 1s
+      retries: 140
+      start_period: 3s
+
+  mc-create-bucket:
+    container_name: nemuriya_mc_create_bucket
+    image: minio/mc
+    depends_on:
+      minio:
+        condition: service_healthy
+    env_file:
+      - .env
+    entrypoint: sh
+    command: -c "mc config host add minio http://minio:9000 ${AWS_S3_ACCESS_KEY_ID} ${AWS_S3_SECRET_ACCESS_KEY} && mc mb minio/${AWS_STORAGE_BUCKET_NAME} && mc anonymous set public minio/${AWS_STORAGE_BUCKET_NAME}"
