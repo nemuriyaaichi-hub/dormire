@@ -7,16 +7,36 @@
   publish = "."
   command = ""
 
-# スマホカメラ API を使うので HTTPS は必須。
-# Netlify は標準で HTTPS 提供、追加設定不要。
+# -----------------------------------------------------------------
+# セキュリティヘッダ
+# -----------------------------------------------------------------
+# Chrome Safe Browsing の誤検知を減らすため、強めの合法性シグナルを付与する。
+# - CSP で許可ドメインを明示 → フィッシング/マルウェア判定されにくくなる
+# - HSTS / Referrer-Policy / Permissions-Policy で最新ベストプラクティス準拠
+# - X-Robots-Tag: noindex → プロトタイプが検索結果に出ないように
 
 [[headers]]
   for = "/*"
   [headers.values]
-    # getUserMedia はセキュアコンテキストのみ。
-    Permissions-Policy = "camera=(self), microphone=()"
-    X-Content-Type-Options = "nosniff"
-    Referrer-Policy = "strict-origin-when-cross-origin"
+    # getUserMedia はセキュアコンテキスト + 明示的許可のみ。
+    Permissions-Policy = "camera=(self), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()"
 
-# MediaPipe の WASM を CDN から読み込むので COEP/COOP は設定しない。
-# （SharedArrayBuffer が必要になった場合は cross-origin-isolated を追加）
+    # 評判の良いドメインだけを許可する CSP。
+    # - MediaPipe 本体は jsdelivr 配信
+    # - モデルファイル (.task) は storage.googleapis.com
+    # - WASM 実行のために 'wasm-unsafe-eval' が必要
+    # - カメラ映像は blob: (video), worker は blob: (MediaPipe 内部)
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' https://cdn.jsdelivr.net https://storage.googleapis.com; worker-src 'self' blob:; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+
+    # HTTPS 固定（Netlify は標準で HTTPS 提供済み）
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains"
+
+    # その他のセキュリティベストプラクティス
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Cross-Origin-Opener-Policy = "same-origin"
+    Cross-Origin-Resource-Policy = "same-origin"
+
+    # Phase 0 プロトタイプは検索エンジンに露出させない
+    X-Robots-Tag = "noindex, nofollow"

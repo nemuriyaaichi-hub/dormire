@@ -12,16 +12,27 @@
 
 ```
 web-prototype/
-├── index.html    # カメラ計測ページ
+├── index.html    # 説明ランディングページ（カメラ要求なし）
+├── measure.html  # 計測ページ（カメラ許可は同意後）
 ├── test.html     # calc.js のユニットテスト（合成ランドマーク）
 ├── app.js        # MediaPipe Pose 統合 + UI
 ├── calc.js       # 20項目算出の純関数モジュール
 ├── style.css     # モバイルファースト CSS
-├── netlify.toml  # Netlify 設定（ヘッダのみ）
+├── favicon.svg   # ファビコン
+├── netlify.toml  # Netlify 設定（CSP + セキュリティヘッダ）
 └── README.md     # このファイル
 ```
 
 外部依存は CDN 経由で読み込む MediaPipe Tasks Vision (`@mediapipe/tasks-vision@0.10.14`) のみ。`node_modules` もビルド成果物もない。
+
+### 2段階構成の理由
+
+初回訪問時にいきなり `getUserMedia` を呼び出すとブラウザのセーフブラウジングに **フィッシング/マルウェア疑い** として誤検知されやすいため、ページを 2 段階に分けている:
+
+| ページ | 役割 | カメラ権限 |
+|---|---|---|
+| `index.html` | 説明・プライバシー・同意 | 要求しない |
+| `measure.html` | 実際の計測 | ユーザーがボタンで明示的に許可 |
 
 ---
 
@@ -62,6 +73,42 @@ netlify deploy --dir=. --prod
 3. **Base directory** を `web-prototype` に設定
 4. **Publish directory** を `.`（空または `web-prototype`）に
 5. Build command は空
+
+---
+
+## 🛡️ Chrome の「危険なサイト」警告が出るとき
+
+Chrome の **Safe Browsing** は、新規ドメインかつカメラなどの権限を要求するページを高確率でフィッシング候補として誤検知する。`netlify.app` サブドメインは **他の利用者の悪用により共有評価が下がっている** ことが多く、同じドメインを使っているだけで警告が出る場合もある。
+
+### 本リポジトリ側で実施済みの対策
+
+- **2段階ページ構成** — 初回訪問時は `index.html`（説明のみ）、計測は `measure.html` に分離。いきなり権限要求しない
+- **プライバシー明示** — データをサーバーに送らないこと、ログインや決済がないことを本文で記述
+- **favicon と完全な meta タグ** — `description` / `theme-color` / `robots` / `apple-mobile-web-app-*`
+- **noindex** — プロトタイプを検索エンジンに晒さない
+- **強力な Content-Security-Policy** — 許可ドメインを `jsdelivr` と `storage.googleapis.com` に限定
+- **その他セキュリティヘッダ** — HSTS / X-Frame-Options / Referrer-Policy / Permissions-Policy / COOP / CORP
+
+### それでも警告が出る場合の運用側対処
+
+**① Netlify サブドメイン名を変える**
+
+Netlify ダッシュボード → `Site configuration` → `Site details` → `Change site name` で、推測されにくい名前に変更する。例: `dormire-proto-7f3k2` のようにランダム要素を含めると共有評価の影響を受けにくい。
+
+**② Google Safe Browsing に誤検知申告する**
+
+1. Chrome の警告画面で [詳細] → [この安全でないサイトに関するフィードバックを送信] を開く
+2. あるいは https://safebrowsing.google.com/safebrowsing/report_error/?hl=ja を直接開く
+3. URL と「誤検知です」の説明を送信
+4. 通常 24〜72 時間で再評価される
+
+**③ カスタムドメインを使う（最も確実）**
+
+`dormire.co.jp` などのサブドメイン（例: `proto.dormire.co.jp`）を Netlify に紐付ける。独自ドメインは共有評価の影響を受けず、信頼度が大幅に上がる。手順は https://docs.netlify.com/domains-https/custom-domains/ を参照。
+
+**④ Chrome の「保護強化機能」を無効にして個別確認する（一時的）**
+
+設定 → セキュリティ → セーフブラウジング → 「標準の保護機能」に切り替えると、警告が出なくなる場合がある。ただし検証作業者の端末だけでの暫定対応。
 
 ---
 

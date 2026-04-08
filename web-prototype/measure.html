@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta
+      name="description"
+      content="Dormire 姿勢計測プロトタイプの検証ページ。ブラウザのカメラで全身を撮影し、骨格ランドマークから 20 項目を算出します。"
+    />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#0f1115" />
+    <title>計測 — Dormire Phase 0 プロトタイプ</title>
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>Dormire 計測</h1>
+        <div class="subtitle">Phase 0 検証用 / 内部プロトタイプ</div>
+      </div>
+      <a href="./" class="subtitle">← 戻る</a>
+    </header>
+
+    <main>
+      <section class="card">
+        <div class="legend" style="margin-bottom: 8px">
+          カメラ映像はこの端末のブラウザ内でのみ処理されます。画像・計測値はサーバーに送信されません（Phase 0 検証用のため）。
+        </div>
+        <div class="stage" id="stage">
+          <div class="fps" id="fps">FPS: --</div>
+          <video
+            id="video"
+            playsinline
+            autoplay
+            muted
+            webkit-playsinline
+          ></video>
+          <canvas id="overlay"></canvas>
+        </div>
+        <div class="controls">
+          <button id="btnStart">カメラを起動して計測を開始</button>
+          <button id="btnCapture" disabled>この瞬間で確定</button>
+          <button id="btnReset" class="ghost">リセット</button>
+        </div>
+        <div class="status" id="status">
+          待機中 — カメラを起動してください
+        </div>
+        <div class="legend">
+          iOS Safari / Android Chrome 最新版で動作します。HTTPS
+          または localhost が必要です。
+        </div>
+      </section>
+
+      <section class="card" id="resultsCard" hidden>
+        <h3 style="margin: 0 0 8px 0; font-size: 14px">計測結果 (20項目)</h3>
+        <table class="results">
+          <tbody id="resultsBody"></tbody>
+        </table>
+        <div class="legend">
+          値は画像正規化座標 [0,1] ベース。Apple Vision
+          との絶対値比較にはキャリブレーションが必要です（計画書 L344）。
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      Dormire — 姿勢計測プロトタイプ（Phase 0 Go/No-Go 判定用）
+    </footer>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

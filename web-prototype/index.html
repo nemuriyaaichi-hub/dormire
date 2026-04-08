@@ -11,57 +11,125 @@
       name="apple-mobile-web-app-status-bar-style"
       content="black-translucent"
     />
-    <title>Dormire Phase 0 計測プロトタイプ</title>
+    <meta name="robots" content="noindex, nofollow" />
+    <meta
+      name="description"
+      content="Dormire 姿勢計測 Web プロトタイプ。スマートフォンのブラウザで骨格認識を行う技術検証のための内部用ページです。"
+    />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#0f1115" />
+    <meta name="format-detection" content="telephone=no" />
+    <title>Dormire 姿勢計測プロトタイプ</title>
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
     <header>
       <div>
-        <h1>Dormire 計測プロトタイプ</h1>
-        <div class="subtitle">Phase 0 / MediaPipe Pose 検証</div>
+        <h1>Dormire 姿勢計測プロトタイプ</h1>
+        <div class="subtitle">Phase 0 技術検証ページ</div>
       </div>
-      <a href="./test.html" class="subtitle">▶ テスト</a>
+      <a href="./test.html" class="subtitle">テスト</a>
     </header>
 
     <main>
       <section class="card">
-        <div class="stage" id="stage">
-          <div class="fps" id="fps">FPS: --</div>
-          <video
-            id="video"
-            playsinline
-            autoplay
-            muted
-            webkit-playsinline
-          ></video>
-          <canvas id="overlay"></canvas>
+        <h2 style="margin: 0 0 10px 0; font-size: 16px">これは何のページ？</h2>
+        <p style="margin: 0 0 10px 0; line-height: 1.7">
+          Dormire
+          の姿勢計測機能を、スマートフォンのブラウザだけで動かせるか検証するためのプロトタイプです。開発チームの
+          <strong>Go / No-Go 判定</strong>
+          に使う目的で公開している内部向けページであり、一般ユーザー向けのサービスではありません。
+        </p>
+        <p style="margin: 0; line-height: 1.7">
+          既存の iOS ネイティブ版と同じ 20
+          項目を、ブラウザ上の骨格認識エンジン (MediaPipe Pose Landmarker)
+          で算出できるかを確認します。
+        </p>
+      </section>
+
+      <section class="card">
+        <h2 style="margin: 0 0 10px 0; font-size: 16px">使っている技術</h2>
+        <ul style="margin: 0; padding-left: 20px; line-height: 1.8">
+          <li>
+            HTML / CSS / JavaScript (ES modules) — フレームワークやビルドなし
+          </li>
+          <li>
+            <a
+              href="https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker"
+              rel="noopener noreferrer"
+              target="_blank"
+              >Google MediaPipe Pose Landmarker</a
+            >
+            (WebAssembly、端末内で実行)
+          </li>
+          <li>Netlify (静的ホスティング、ビルド不要)</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2 style="margin: 0 0 10px 0; font-size: 16px">
+          プライバシーと取り扱い
+        </h2>
+        <ul style="margin: 0; padding-left: 20px; line-height: 1.8">
+          <li>カメラ映像は<strong>この端末のブラウザ内で処理</strong>されます。</li>
+          <li>
+            画像ファイル・計測値・個人情報はサーバーに送信・保存されません。
+          </li>
+          <li>
+            クッキーやトラッキングは使用していません。外部通信は MediaPipe
+            のモデルファイル取得のみです。
+          </li>
+          <li>
+            ログインやアカウント登録、決済、連絡先収集は一切ありません。
+          </li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2 style="margin: 0 0 10px 0; font-size: 16px">計測の流れ</h2>
+        <ol style="margin: 0; padding-left: 20px; line-height: 1.8">
+          <li>下のボタンから計測ページへ進む</li>
+          <li>カメラ権限の許可を求められるので許可</li>
+          <li>全身がフレームに収まるように立つ（3〜4 m 離れる）</li>
+          <li>骨格が描画されたら「確定」で 20 項目の結果を表示</li>
+        </ol>
+        <div class="controls" style="margin-top: 14px">
+          <a
+            href="./measure.html"
+            style="
+              flex: 1 1 auto;
+              min-height: 48px;
+              padding: 12px 14px;
+              font-size: 15px;
+              font-weight: 600;
+              color: #f0f3f7;
+              background: #4ea3ff;
+              border-radius: 8px;
+              text-align: center;
+              text-decoration: none;
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+            "
+            >同意して計測ページへ進む</a
+          >
         </div>
-        <div class="controls">
-          <button id="btnStart">📷 カメラ起動</button>
-          <button id="btnCapture" disabled>📸 計測</button>
-          <button id="btnReset" class="ghost">リセット</button>
-        </div>
-        <div class="status" id="status">待機中 — カメラを起動してください</div>
-        <div class="legend">
-          ※ iOS Safari / Android Chrome で HTTPS が必要です。ローカルは
-          localhost のみ例外。
+        <div class="legend" style="margin-top: 6px">
+          ボタンを押すまでカメラ権限は要求されません。
         </div>
       </section>
 
-      <section class="card" id="resultsCard" hidden>
-        <h3 style="margin: 0 0 8px 0; font-size: 14px">計測結果 (20項目)</h3>
-        <table class="results">
-          <tbody id="resultsBody"></tbody>
-        </table>
-        <div class="legend">
-          値は画像正規化座標 [0,1] ベース。Apple Vision
-          との絶対値比較にはキャリブレーションが必要です（計画書 L344）。
-        </div>
+      <section class="card">
+        <h2 style="margin: 0 0 10px 0; font-size: 16px">お問い合わせ</h2>
+        <p style="margin: 0; line-height: 1.7">
+          このページは Dormire 開発チームの内部検証用です。一般公開を意図したものではありません。不具合や誤検知などの連絡は、運用担当者まで直接お願いします。
+        </p>
       </section>
     </main>
 
-    <footer>Dormire — Phase 0 Go/No-Go 判定用プロトタイプ</footer>
-
-    <script type="module" src="./app.js"></script>
+    <footer>
+      Dormire Phase 0 プロトタイプ / 内部向け技術検証ページ
+    </footer>
   </body>
 </html>
