@@ -54,7 +54,26 @@ python3 -m http.server 8080
 
 ---
 
-## ☁️ Netlify にデプロイ
+## ☁️ デプロイ（推奨: GitHub Pages）
+
+**Netlify で Chrome の「危険なサイト」警告が出る場合は、GitHub Pages への乗り換えを強く推奨します。** `github.io` ドメインは Safe Browsing の評価が極めて高く、ほぼ誤検知されません。
+
+### GitHub Pages での公開手順（推奨）
+
+本リポジトリには [`.github/workflows/pages.yml`](../.github/workflows/pages.yml) を用意してあり、`main` ブランチに push すると `web-prototype/` が自動で Pages にデプロイされます。
+
+**初回だけ手動で有効化が必要:**
+
+1. GitHub のリポジトリを開く → `Settings` タブ
+2. 左サイドバーで `Pages` を選択
+3. `Build and deployment` セクション → `Source` のプルダウンで **`GitHub Actions`** を選択
+4. 画面下部に移り、`Save` があれば押下（UI によっては自動保存）
+5. `Actions` タブで `Deploy web-prototype to GitHub Pages` ワークフローが緑のチェックになるまで待つ（初回は 1〜2 分）
+6. 成功後の URL: **`https://nemuriyaaichi-hub.github.io/dormire/`**
+
+以降は `main` に push するたびに自動再デプロイされます。手動で走らせたい場合は `Actions` → `Deploy web-prototype to GitHub Pages` → `Run workflow`。
+
+### Netlify にデプロイ（任意）
 
 ### 方法 A: Netlify CLI（最短）
 

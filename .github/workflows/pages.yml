@@ -1,0 +1,49 @@
+# GitHub Pages に web-prototype/ を自動デプロイするワークフロー。
+#
+# 有効化手順（リポジトリ設定で一度だけ必要）:
+#   1. GitHub のリポジトリ → Settings → Pages
+#   2. Source の プルダウンで "GitHub Actions" を選択して保存
+#   3. main にこの workflow が push されると自動で Pages にデプロイされる
+#   4. URL: https://<user>.github.io/<repo>/
+#      → このリポジトリの場合: https://nemuriyaaichi-hub.github.io/dormire/
+
+name: Deploy web-prototype to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "web-prototype/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload web-prototype as Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./web-prototype
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
