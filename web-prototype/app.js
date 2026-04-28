@@ -42,6 +42,7 @@ let trackCapabilities = null;
 
 // ---- Status helpers --------------------------------------------
 function setStatus(msg, level = "") {
+  if (!statusEl) return;
   statusEl.textContent = msg;
   statusEl.className = "status" + (level ? " " + level : "");
 }
