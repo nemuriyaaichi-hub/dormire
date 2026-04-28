@@ -21,7 +21,6 @@ import { calculateAll, LABELS, fmt, POSE } from "./calc.js";
 const $ = (id) => document.getElementById(id);
 const video = $("video");
 const overlay = $("overlay");
-const stage = $("stage");
 const ctx = overlay.getContext("2d");
 const btnCapture = $("btnCapture");
 const btnReset = $("btnReset");
@@ -103,8 +102,6 @@ function resizeOverlay() {
   const h = video.videoHeight || 960;
   overlay.width = w;
   overlay.height = h;
-  // stage の枠を映像本来の比率に合わせる（cover でもクロップ拡大しないように）
-  if (stage) stage.style.aspectRatio = `${w} / ${h}`;
 }
 
 // ---- 描画ループ ------------------------------------------------
