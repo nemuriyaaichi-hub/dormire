@@ -23,18 +23,8 @@
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
-    <header>
-      <div>
-        <h1>Dormire 計測</h1>
-        <div class="subtitle">Phase 0 検証用 / 内部プロトタイプ</div>
-      </div>
-    </header>
-
     <main>
       <section class="card">
-        <div class="legend" style="margin-bottom: 8px">
-          カメラ映像はこの端末のブラウザ内でのみ処理されます。画像・計測値はサーバーに送信されません（Phase 0 検証用のため）。
-        </div>
         <div class="stage" id="stage">
           <div class="fps" id="fps">FPS: --</div>
           <video
@@ -45,45 +35,10 @@
             webkit-playsinline
           ></video>
           <canvas id="overlay"></canvas>
-          <div class="focus-ring" id="focusRing"></div>
         </div>
         <div class="controls">
           <button id="btnCapture" disabled>測定</button>
           <button id="btnReset" class="ghost">リセット</button>
-        </div>
-
-        <div class="focus-controls" id="focusControls" hidden>
-          <div class="focus-row">
-            <span class="focus-label">フォーカス</span>
-            <div class="focus-modes" role="group" aria-label="フォーカスモード">
-              <button type="button" id="btnFocusAuto" class="focus-mode active">
-                オート
-              </button>
-              <button type="button" id="btnFocusManual" class="focus-mode">
-                マニュアル
-              </button>
-            </div>
-            <button
-              type="button"
-              id="btnFocusTap"
-              class="focus-mode"
-              title="画面タップで再フォーカス"
-            >
-              タップ再合焦
-            </button>
-          </div>
-          <div class="focus-row" id="focusSliderRow" hidden>
-            <span class="focus-label">距離</span>
-            <input
-              type="range"
-              id="focusRange"
-              min="0"
-              max="1"
-              step="0.01"
-              value="0.5"
-            />
-            <span class="focus-value" id="focusValue">--</span>
-          </div>
         </div>
         <div class="status" id="status">
           待機中 — カメラを起動してください

@@ -29,14 +29,6 @@ const statusEl = $("status");
 const resultsCard = $("resultsCard");
 const resultsBody = $("resultsBody");
 const fpsEl = $("fps");
-const focusControls = $("focusControls");
-const btnFocusAuto = $("btnFocusAuto");
-const btnFocusManual = $("btnFocusManual");
-const btnFocusTap = $("btnFocusTap");
-const focusSliderRow = $("focusSliderRow");
-const focusRange = $("focusRange");
-const focusValue = $("focusValue");
-const focusRing = $("focusRing");
 
 // ---- State -----------------------------------------------------
 let poseLandmarker = null;
@@ -47,7 +39,6 @@ let lastFrameTime = 0;
 let fpsEMA = 0;
 let videoTrack = null;
 let trackCapabilities = null;
-let focusMode = "continuous"; // "continuous" | "manual"
 
 // ---- Status helpers --------------------------------------------
 function setStatus(msg, level = "") {
@@ -100,7 +91,6 @@ async function startCamera() {
 
     videoTrack = stream.getVideoTracks()[0] || null;
     await resetZoomToWidest();
-    await initFocusControls();
 
     rafId = requestAnimationFrame(loop);
   } catch (e) {
@@ -151,154 +141,6 @@ async function resetZoomToWidest() {
       console.warn("zoom 解除に失敗:", e);
     }
   }
-}
-
-// ---- フォーカス制御 --------------------------------------------
-async function initFocusControls() {
-  if (!videoTrack || typeof videoTrack.getCapabilities !== "function") {
-    focusControls.hidden = true;
-    return;
-  }
-  try {
-    trackCapabilities = videoTrack.getCapabilities();
-  } catch {
-    focusControls.hidden = true;
-    return;
-  }
-
-  const supportsFocusMode =
-    Array.isArray(trackCapabilities.focusMode) &&
-    trackCapabilities.focusMode.length > 0;
-  const supportsManual =
-    supportsFocusMode && trackCapabilities.focusMode.includes("manual");
-  const supportsFocusDistance = "focusDistance" in trackCapabilities;
-  const supportsTapFocus =
-    supportsFocusMode &&
-    (trackCapabilities.focusMode.includes("single-shot") ||
-      trackCapabilities.focusMode.includes("continuous"));
-
-  if (!supportsFocusMode && !supportsFocusDistance) {
-    focusControls.hidden = true;
-    return;
-  }
-
-  focusControls.hidden = false;
-  btnFocusManual.disabled = !(supportsManual && supportsFocusDistance);
-  btnFocusTap.hidden = !supportsTapFocus;
-
-  if (supportsFocusDistance) {
-    const fd = trackCapabilities.focusDistance;
-    focusRange.min = fd.min;
-    focusRange.max = fd.max;
-    focusRange.step = fd.step || (fd.max - fd.min) / 100 || 0.01;
-    const settings = videoTrack.getSettings?.() || {};
-    const cur =
-      typeof settings.focusDistance === "number"
-        ? settings.focusDistance
-        : (fd.min + fd.max) / 2;
-    focusRange.value = cur;
-    focusValue.textContent = formatFocusValue(cur);
-  }
-
-  await applyFocusMode("continuous");
-}
-
-function formatFocusValue(v) {
-  const n = Number(v);
-  if (!isFinite(n)) return "--";
-  return n.toFixed(2);
-}
-
-async function applyFocusMode(mode) {
-  if (!videoTrack) return;
-  focusMode = mode;
-  btnFocusAuto.classList.toggle("active", mode === "continuous");
-  btnFocusManual.classList.toggle("active", mode === "manual");
-  focusSliderRow.hidden = mode !== "manual";
-
-  try {
-    if (mode === "continuous") {
-      await videoTrack.applyConstraints({
-        advanced: [{ focusMode: "continuous" }],
-      });
-    } else if (mode === "manual") {
-      const dist = parseFloat(focusRange.value);
-      await videoTrack.applyConstraints({
-        advanced: [{ focusMode: "manual", focusDistance: dist }],
-      });
-    }
-  } catch (e) {
-    console.warn("focusMode 適用失敗:", e);
-  }
-}
-
-async function applyManualFocusDistance(dist) {
-  if (!videoTrack) return;
-  focusValue.textContent = formatFocusValue(dist);
-  if (focusMode !== "manual") return;
-  try {
-    await videoTrack.applyConstraints({
-      advanced: [{ focusMode: "manual", focusDistance: dist }],
-    });
-  } catch (e) {
-    console.warn("focusDistance 適用失敗:", e);
-  }
-}
-
-async function triggerSingleShotFocus(xRatio = 0.5, yRatio = 0.5) {
-  if (!videoTrack) return;
-  const caps = trackCapabilities || {};
-  const modes = Array.isArray(caps.focusMode) ? caps.focusMode : [];
-  try {
-    const advanced = [];
-    const poi =
-      "pointsOfInterest" in caps
-        ? [{ pointsOfInterest: [{ x: xRatio, y: yRatio }] }]
-        : [];
-    if (modes.includes("single-shot")) {
-      advanced.push(...poi, { focusMode: "single-shot" });
-    } else if (modes.includes("continuous")) {
-      advanced.push(...poi, { focusMode: "continuous" });
-    } else {
-      return;
-    }
-    await videoTrack.applyConstraints({ advanced });
-    if (modes.includes("single-shot")) {
-      focusMode = "continuous";
-      btnFocusAuto.classList.add("active");
-      btnFocusManual.classList.remove("active");
-      focusSliderRow.hidden = true;
-      setTimeout(() => {
-        videoTrack
-          ?.applyConstraints({ advanced: [{ focusMode: "continuous" }] })
-          .catch(() => {});
-      }, 800);
-    }
-  } catch (e) {
-    console.warn("single-shot focus 失敗:", e);
-  }
-}
-
-function showFocusRing(clientX, clientY) {
-  const stageRect = stage.getBoundingClientRect();
-  focusRing.style.left = `${clientX - stageRect.left}px`;
-  focusRing.style.top = `${clientY - stageRect.top}px`;
-  focusRing.classList.add("show");
-  clearTimeout(showFocusRing._t);
-  showFocusRing._t = setTimeout(() => {
-    focusRing.classList.remove("show");
-  }, 700);
-}
-
-function handleStageTap(e) {
-  if (!videoTrack) return;
-  const t = e.touches?.[0] || e.changedTouches?.[0] || e;
-  const rect = stage.getBoundingClientRect();
-  const x = (t.clientX - rect.left) / rect.width;
-  const y = (t.clientY - rect.top) / rect.height;
-  if (x < 0 || x > 1 || y < 0 || y > 1) return;
-  showFocusRing(t.clientX, t.clientY);
-  triggerSingleShotFocus(x, y);
 }
 
 // ---- 描画ループ ------------------------------------------------
@@ -434,7 +276,6 @@ function reset() {
   }
   videoTrack = null;
   trackCapabilities = null;
-  focusControls.hidden = true;
   ctx.clearRect(0, 0, overlay.width, overlay.height);
   resultsCard.hidden = true;
   resultsBody.innerHTML = "";
@@ -448,22 +289,6 @@ function reset() {
 // ---- イベント結線 ----------------------------------------------
 btnCapture.addEventListener("click", capture);
 btnReset.addEventListener("click", reset);
-
-btnFocusAuto.addEventListener("click", () => applyFocusMode("continuous"));
-btnFocusManual.addEventListener("click", () => applyFocusMode("manual"));
-btnFocusTap.addEventListener("click", () => triggerSingleShotFocus(0.5, 0.5));
-focusRange.addEventListener("input", (e) => {
-  applyManualFocusDistance(parseFloat(e.target.value));
-});
-stage.addEventListener("click", handleStageTap);
-stage.addEventListener(
-  "touchend",
-  (e) => {
-    e.preventDefault();
-    handleStageTap(e);
-  },
-  { passive: false }
-);
 
 // getUserMedia 非対応の早期通知
 if (!navigator.mediaDevices?.getUserMedia) {
