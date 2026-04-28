@@ -29,6 +29,12 @@ const statusEl = $("status");
 const resultsCard = $("resultsCard");
 const resultsBody = $("resultsBody");
 const fpsEl = $("fps");
+const stepText = $("stepText");
+const dotFront = $("dotFront");
+const dotSide = $("dotSide");
+const thumbs = $("thumbs");
+const thumbFront = $("thumbFront");
+const thumbSide = $("thumbSide");
 
 // ---- State -----------------------------------------------------
 let poseLandmarker = null;
@@ -39,6 +45,12 @@ let lastFrameTime = 0;
 let fpsEMA = 0;
 let videoTrack = null;
 let trackCapabilities = null;
+
+// 2段階キャプチャ: 1枚目=正面, 2枚目=横
+const STEPS = ["front", "side"];
+const STEP_LABELS = { front: "正面", side: "横から" };
+let currentStep = "front";
+const captures = { front: null, side: null }; // { landmarks, image, values }
 
 // ---- Status helpers --------------------------------------------
 function setStatus(msg, level = "") {
@@ -210,22 +222,58 @@ function drawLandmarks(landmarks) {
 }
 
 // ---- キャプチャ処理 --------------------------------------------
+function snapshotVideoToDataURL() {
+  const w = video.videoWidth;
+  const h = video.videoHeight;
+  if (!w || !h) return "";
+  const c = document.createElement("canvas");
+  c.width = w;
+  c.height = h;
+  const cctx = c.getContext("2d");
+  cctx.drawImage(video, 0, 0, w, h);
+  return c.toDataURL("image/jpeg", 0.85);
+}
+
 function capture() {
   if (!lastLandmarks) {
     setStatus("まだランドマークを検出できていません", "error");
     return;
   }
   try {
-    const values = calculateAll(lastLandmarks);
-    renderResults(values);
-    setStatus("計測完了", "ok");
+    const landmarks = lastLandmarks.map((p) => ({ ...p }));
+    const image = snapshotVideoToDataURL();
+    const values = calculateAll(landmarks);
+    captures[currentStep] = { landmarks, image, values };
+
+    // サムネイル更新
+    if (currentStep === "front" && image) thumbFront.src = image;
+    if (currentStep === "side" && image) thumbSide.src = image;
+    if (captures.front || captures.side) thumbs.hidden = false;
+
+    if (currentStep === "front") {
+      currentStep = "side";
+      dotFront.classList.remove("active");
+      dotFront.classList.add("done");
+      dotSide.classList.add("active");
+      stepText.textContent = "② 横から";
+      btnCapture.textContent = "横から測定";
+      setStatus("正面 OK — 続けて横向きに立って測定してください", "ok");
+    } else {
+      dotSide.classList.remove("active");
+      dotSide.classList.add("done");
+      stepText.textContent = "完了";
+      btnCapture.disabled = true;
+      btnCapture.textContent = "測定完了";
+      renderResults();
+      setStatus("計測完了（正面・横）", "ok");
+    }
   } catch (e) {
     console.error(e);
     setStatus(`計算エラー: ${e.message || e}`, "error");
   }
 }
 
-function renderResults(values) {
+function renderResults() {
   resultsCard.hidden = false;
   const order = [
     "right_arm_length",
@@ -249,11 +297,14 @@ function renderResults(values) {
     "head_width",
     "posture",
   ];
+  const front = captures.front?.values || {};
+  const side = captures.side?.values || {};
   resultsBody.innerHTML = order
     .map((k) => {
-      const v = values[k];
       const cls = k === "posture" ? ' class="highlight"' : "";
-      return `<tr${cls}><th>${LABELS[k]}</th><td>${fmt(v)}</td></tr>`;
+      const fv = k in front ? fmt(front[k]) : "—";
+      const sv = k in side ? fmt(side[k]) : "—";
+      return `<tr${cls}><th>${LABELS[k]}</th><td>${fv}</td><td>${sv}</td></tr>`;
     })
     .join("");
 }
@@ -274,6 +325,20 @@ function reset() {
   resultsBody.innerHTML = "";
   btnCapture.disabled = true;
   fpsEl.textContent = "FPS: --";
+
+  // 2段階状態を初期化
+  currentStep = "front";
+  captures.front = null;
+  captures.side = null;
+  thumbs.hidden = true;
+  thumbFront.removeAttribute("src");
+  thumbSide.removeAttribute("src");
+  dotFront.classList.add("active");
+  dotFront.classList.remove("done");
+  dotSide.classList.remove("active", "done");
+  stepText.textContent = "① 正面";
+  btnCapture.textContent = "正面を測定";
+
   setStatus("リセット完了");
   // リセット後は自動でカメラを再起動して計測を続行できるようにする
   startCamera();

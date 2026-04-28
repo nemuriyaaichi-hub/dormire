@@ -173,12 +173,18 @@ table.results td {
   border-bottom: 1px solid var(--border);
 }
 
-table.results th {
+table.results thead th {
   color: var(--muted);
-  font-weight: 500;
-  width: 56%;
+  font-weight: 600;
 }
 
+table.results tbody th {
+  color: var(--muted);
+  font-weight: 500;
+  width: 44%;
+}
+
+table.results th.num,
 table.results td {
   font-variant-numeric: tabular-nums;
   text-align: right;
@@ -199,6 +205,71 @@ table.results tr.highlight td {
   font-size: 11px;
   border-radius: 4px;
   z-index: 10;
+}
+
+.step-indicator {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  background: rgba(0, 0, 0, 0.6);
+  color: var(--fg);
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 999px;
+  z-index: 10;
+}
+
+.step-dots {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.step-dots .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.step-dots .dot.active {
+  background: var(--accent);
+}
+
+.step-dots .dot.done {
+  background: var(--ok);
+}
+
+.thumbs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.thumbs figure {
+  margin: 0;
+  background: #000;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.thumbs img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+}
+
+.thumbs figcaption {
+  padding: 4px 6px;
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
 }
 
 .legend {
