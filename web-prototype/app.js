@@ -21,6 +21,7 @@ import { calculateAll, LABELS, fmt, POSE } from "./calc.js";
 const $ = (id) => document.getElementById(id);
 const video = $("video");
 const overlay = $("overlay");
+const stage = $("stage");
 const ctx = overlay.getContext("2d");
 const btnStart = $("btnStart");
 const btnCapture = $("btnCapture");
@@ -76,8 +77,8 @@ async function startCamera() {
     const stream = await navigator.mediaDevices.getUserMedia({
       video: {
         facingMode: "environment", // 背面カメラ優先
-        width: { ideal: 1280 },
-        height: { ideal: 720 },
+        width: { ideal: 720 },
+        height: { ideal: 1280 },
       },
       audio: false,
     });
@@ -105,6 +106,8 @@ function resizeOverlay() {
   const h = video.videoHeight || 960;
   overlay.width = w;
   overlay.height = h;
+  // stage の枠を映像本来の比率に合わせる（cover でもクロップ拡大しないように）
+  if (stage) stage.style.aspectRatio = `${w} / ${h}`;
 }
 
 // ---- 描画ループ ------------------------------------------------
@@ -256,4 +259,8 @@ btnReset.addEventListener("click", reset);
 if (!navigator.mediaDevices?.getUserMedia) {
   setStatus("このブラウザはカメラ API に対応していません", "error");
   btnStart.disabled = true;
+} else {
+  // ページ表示と同時にカメラ起動を試みる
+  // iOS Safari でユーザー操作が必要な場合は失敗するが、その時はボタンタップでフォールバックできる
+  startCamera();
 }
