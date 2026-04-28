@@ -103,12 +103,12 @@ function resizeOverlay() {
   const h = video.videoHeight || 960;
   overlay.width = w;
   overlay.height = h;
-  // 映像本来の比率を保ちつつ、ボタン直前まで届くよう縦に 5cm 足す
+  // 映像本来の比率を保ちつつ、縦に 10cm 足す（ボタンも連動して下がる）
   if (stage) {
     const stageW = stage.clientWidth;
     if (stageW > 0) {
       stage.style.aspectRatio = "auto";
-      stage.style.height = `calc(${((stageW * h) / w).toFixed(2)}px + 5cm)`;
+      stage.style.height = `calc(${((stageW * h) / w).toFixed(2)}px + 10cm)`;
     } else {
       stage.style.aspectRatio = `${w} / ${h}`;
       stage.style.height = "";
