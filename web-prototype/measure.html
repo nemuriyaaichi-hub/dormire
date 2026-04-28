@@ -45,10 +45,45 @@
             webkit-playsinline
           ></video>
           <canvas id="overlay"></canvas>
+          <div class="focus-ring" id="focusRing"></div>
         </div>
         <div class="controls">
           <button id="btnCapture" disabled>測定</button>
           <button id="btnReset" class="ghost">リセット</button>
+        </div>
+
+        <div class="focus-controls" id="focusControls" hidden>
+          <div class="focus-row">
+            <span class="focus-label">フォーカス</span>
+            <div class="focus-modes" role="group" aria-label="フォーカスモード">
+              <button type="button" id="btnFocusAuto" class="focus-mode active">
+                オート
+              </button>
+              <button type="button" id="btnFocusManual" class="focus-mode">
+                マニュアル
+              </button>
+            </div>
+            <button
+              type="button"
+              id="btnFocusTap"
+              class="focus-mode"
+              title="画面タップで再フォーカス"
+            >
+              タップ再合焦
+            </button>
+          </div>
+          <div class="focus-row" id="focusSliderRow" hidden>
+            <span class="focus-label">距離</span>
+            <input
+              type="range"
+              id="focusRange"
+              min="0"
+              max="1"
+              step="0.01"
+              value="0.5"
+            />
+            <span class="focus-value" id="focusValue">--</span>
+          </div>
         </div>
         <div class="status" id="status">
           待機中 — カメラを起動してください
