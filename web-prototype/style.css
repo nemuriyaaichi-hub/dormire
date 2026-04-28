@@ -86,7 +86,7 @@ main {
 .controls {
   display: flex;
   gap: 8px;
-  margin-top: calc(10px + 5cm);
+  margin-top: 10px;
   flex-wrap: wrap;
 }
 
