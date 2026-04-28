@@ -23,7 +23,6 @@ const video = $("video");
 const overlay = $("overlay");
 const stage = $("stage");
 const ctx = overlay.getContext("2d");
-const btnStart = $("btnStart");
 const btnCapture = $("btnCapture");
 const btnReset = $("btnReset");
 const statusEl = $("status");
@@ -70,7 +69,6 @@ async function initLandmarker() {
 // ---- カメラ起動 ------------------------------------------------
 async function startCamera() {
   try {
-    btnStart.disabled = true;
     if (!poseLandmarker) await initLandmarker();
 
     setStatus("カメラへのアクセスを求めています…");
@@ -95,7 +93,6 @@ async function startCamera() {
       `カメラ起動失敗: ${e.message || e} — HTTPS または localhost が必要です`,
       "error"
     );
-    btnStart.disabled = false;
   }
 }
 
@@ -244,23 +241,21 @@ function reset() {
   ctx.clearRect(0, 0, overlay.width, overlay.height);
   resultsCard.hidden = true;
   resultsBody.innerHTML = "";
-  btnStart.disabled = false;
   btnCapture.disabled = true;
   fpsEl.textContent = "FPS: --";
   setStatus("リセット完了");
+  // リセット後は自動でカメラを再起動して計測を続行できるようにする
+  startCamera();
 }
 
 // ---- イベント結線 ----------------------------------------------
-btnStart.addEventListener("click", startCamera);
 btnCapture.addEventListener("click", capture);
 btnReset.addEventListener("click", reset);
 
 // getUserMedia 非対応の早期通知
 if (!navigator.mediaDevices?.getUserMedia) {
   setStatus("このブラウザはカメラ API に対応していません", "error");
-  btnStart.disabled = true;
 } else {
-  // ページ表示と同時にカメラ起動を試みる
-  // iOS Safari でユーザー操作が必要な場合は失敗するが、その時はボタンタップでフォールバックできる
+  // ページ表示と同時にカメラを自動起動
   startCamera();
 }
