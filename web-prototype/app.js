@@ -35,6 +35,11 @@ const dotSide = $("dotSide");
 const thumbs = $("thumbs");
 const thumbFront = $("thumbFront");
 const thumbSide = $("thumbSide");
+const materialCard = $("materialCard");
+const materialSelected = $("materialSelected");
+const materialRadios = document.querySelectorAll(
+  'input[name="pillowMaterial"]'
+);
 
 // ---- State -----------------------------------------------------
 let poseLandmarker = null;
@@ -51,6 +56,7 @@ const STEPS = ["front", "side"];
 const STEP_LABELS = { front: "正面", side: "横から" };
 let currentStep = "front";
 const captures = { front: null, side: null }; // { landmarks, image, values }
+let pillowMaterial = null;
 
 // ---- Status helpers --------------------------------------------
 function setStatus(msg, level = "") {
@@ -265,7 +271,8 @@ function capture() {
       btnCapture.disabled = true;
       btnCapture.textContent = "測定完了";
       renderResults();
-      setStatus("計測完了（正面・横）", "ok");
+      materialCard.hidden = false;
+      setStatus("計測完了 — 枕の素材を選択してください", "ok");
     }
   } catch (e) {
     console.error(e);
@@ -339,6 +346,13 @@ function reset() {
   stepText.textContent = "① 正面";
   btnCapture.textContent = "正面を測定";
 
+  // 枕素材選択を初期化
+  pillowMaterial = null;
+  materialCard.hidden = true;
+  materialSelected.hidden = true;
+  materialSelected.textContent = "";
+  for (const r of materialRadios) r.checked = false;
+
   setStatus("リセット完了");
   // リセット後は自動でカメラを再起動して計測を続行できるようにする
   startCamera();
@@ -347,6 +361,14 @@ function reset() {
 // ---- イベント結線 ----------------------------------------------
 btnCapture.addEventListener("click", capture);
 btnReset.addEventListener("click", reset);
+
+for (const r of materialRadios) {
+  r.addEventListener("change", (e) => {
+    pillowMaterial = e.target.value;
+    materialSelected.hidden = false;
+    materialSelected.textContent = `選択中: ${pillowMaterial}`;
+  });
+}
 
 // getUserMedia 非対応の早期通知
 if (!navigator.mediaDevices?.getUserMedia) {

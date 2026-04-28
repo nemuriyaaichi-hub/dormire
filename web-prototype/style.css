@@ -278,6 +278,48 @@ table.results tr.highlight td {
   margin-top: 6px;
 }
 
+.material-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.material-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  background: rgba(78, 163, 255, 0.08);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.material-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.material-option:has(input:checked) {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #0f1115;
+}
+
+.material-selected {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--ok);
+  text-align: center;
+}
+
 footer {
   padding: 16px;
   text-align: center;
