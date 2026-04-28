@@ -77,7 +77,6 @@ async function startCamera() {
         facingMode: "environment", // 背面カメラ優先
         width: { ideal: 720 },
         height: { ideal: 1280 },
-        aspectRatio: { ideal: 9 / 16 }, // スマホ縦持ち想定
       },
       audio: false,
     });
@@ -104,29 +103,9 @@ function resizeOverlay() {
   const h = video.videoHeight || 960;
   overlay.width = w;
   overlay.height = h;
-  applyOrientation();
+  // stage の枠を映像本来の比率に合わせる（cover でもクロップ拡大しないように）
+  if (stage) stage.style.aspectRatio = `${w} / ${h}`;
 }
-
-// スマホ縦持ち前提。映像が横長で来た時は 90° 回転して縦表示にする
-function applyOrientation() {
-  if (!stage) return;
-  const vw = video.videoWidth || 0;
-  const vh = video.videoHeight || 0;
-  if (!vw || !vh) return;
-  if (vw > vh) {
-    const rect = stage.getBoundingClientRect();
-    stage.style.setProperty("--stage-w", rect.width + "px");
-    stage.style.setProperty("--stage-h", rect.height + "px");
-    stage.classList.add("rotated");
-  } else {
-    stage.classList.remove("rotated");
-    stage.style.removeProperty("--stage-w");
-    stage.style.removeProperty("--stage-h");
-  }
-}
-
-window.addEventListener("resize", applyOrientation);
-window.addEventListener("orientationchange", applyOrientation);
 
 // ---- 描画ループ ------------------------------------------------
 async function loop(ts) {

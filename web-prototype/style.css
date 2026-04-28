@@ -79,18 +79,6 @@ main {
   object-fit: cover;
 }
 
-/* カメラが横長映像で返ってきた場合は 90° 回転して縦持ちに合わせる */
-.stage.rotated video,
-.stage.rotated canvas {
-  inset: auto;
-  top: 50%;
-  left: 50%;
-  width: var(--stage-h);
-  height: var(--stage-w);
-  transform: translate(-50%, -50%) rotate(90deg);
-  transform-origin: center center;
-}
-
 .stage canvas {
   pointer-events: none;
 }
