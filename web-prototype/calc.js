@@ -196,6 +196,24 @@ export function calculateAll(landmarks) {
   // --- 姿勢診断 ----------------------------------------------
   const posture = classifyPosture(back_angle, head_angle);
 
+  // --- 頚部メトリクス（側面ビュー時のみ意味あり）-----------------
+  // カメラに向いている側の耳を visibility で選ぶ
+  const lvis = lear.visibility ?? 0;
+  const rvis = rear.visibility ?? 0;
+  const useLeftSide = lvis >= rvis;
+  const sideEar = useLeftSide ? lear : rear;
+  const sideShoulder = useLeftSide ? ls : rs;
+  const sideFacing = useLeftSide ? "L" : "R";
+
+  // CVA: 肩(C7近似)→耳珠 ライン と 水平 のなす角
+  const cva = Math.abs(angleFromHorizontal(sideShoulder, sideEar));
+  // 頭部前方変位量: 耳と肩の水平距離（正規化座標）
+  const forward_head = horizontalDistance(sideEar, sideShoulder);
+  // 頭部前傾角: 耳→鼻 ライン と 水平 のなす角
+  const head_pitch = Math.abs(angleFromHorizontal(sideEar, nose));
+  // 頚部傾斜角: 肩→耳 ライン と 鉛直 のなす角
+  const neck_tilt = angleFromVertical(sideShoulder, sideEar);
+
   return {
     right_arm_length,
     left_arm_length,
@@ -217,6 +235,11 @@ export function calculateAll(landmarks) {
     left_shoulder_width,
     right_ear_shoulder,
     left_ear_shoulder,
+    cva,
+    forward_head,
+    head_pitch,
+    neck_tilt,
+    side_facing: sideFacing,
   };
 }
 
@@ -245,6 +268,11 @@ export const LABELS = Object.freeze({
   left_shoulder_width: "左半身の肩幅",
   right_ear_shoulder: "右 耳→肩 (垂直)",
   left_ear_shoulder: "左 耳→肩 (垂直)",
+  cva: "CVA／頭椎角 (°)",
+  forward_head: "頭部前方変位量",
+  head_pitch: "頭部前傾角 (°)",
+  neck_tilt: "頚部傾斜角 (°)",
+  occipital_protrusion: "後頭部突出量",
 });
 
 /** 単位 [0,1] の距離値を見やすく整形（3 桁小数）*/

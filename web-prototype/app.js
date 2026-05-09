@@ -11,6 +11,7 @@
 
 import {
   PoseLandmarker,
+  ImageSegmenter,
   FilesetResolver,
   DrawingUtils,
 } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs";
@@ -40,9 +41,12 @@ const materialSelected = $("materialSelected");
 const materialRadios = document.querySelectorAll(
   'input[name="pillowMaterial"]'
 );
+const sideGuide = $("sideGuide");
 
 // ---- State -----------------------------------------------------
 let poseLandmarker = null;
+let imageSegmenter = null;
+let visionFileset = null;
 let rafId = 0;
 let streaming = false;
 let lastLandmarks = null; // 最新の検出結果（カメラ起動中のみ更新）
@@ -66,11 +70,18 @@ function setStatus(msg, level = "") {
 }
 
 // ---- MediaPipe 初期化 ------------------------------------------
+async function getVision() {
+  if (!visionFileset) {
+    visionFileset = await FilesetResolver.forVisionTasks(
+      "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
+    );
+  }
+  return visionFileset;
+}
+
 async function initLandmarker() {
   setStatus("MediaPipe モデル読込中…");
-  const vision = await FilesetResolver.forVisionTasks(
-    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
-  );
+  const vision = await getVision();
   poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
     baseOptions: {
       modelAssetPath:
@@ -85,6 +96,22 @@ async function initLandmarker() {
     outputSegmentationMasks: false,
   });
   setStatus("モデル読込完了");
+}
+
+async function initSegmenter() {
+  if (imageSegmenter) return imageSegmenter;
+  const vision = await getVision();
+  imageSegmenter = await ImageSegmenter.createFromOptions(vision, {
+    baseOptions: {
+      modelAssetPath:
+        "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite",
+      delegate: "GPU",
+    },
+    runningMode: "IMAGE",
+    outputCategoryMask: true,
+    outputConfidenceMasks: false,
+  });
+  return imageSegmenter;
 }
 
 // ---- カメラ起動 ------------------------------------------------
@@ -169,6 +196,8 @@ async function loop(ts) {
       lastLandmarks = null;
     }
 
+    updateSideGuide();
+
     // FPS
     if (lastFrameTime) {
       const dt = ts - lastFrameTime;
@@ -179,6 +208,40 @@ async function loop(ts) {
     lastFrameTime = ts;
   }
   rafId = requestAnimationFrame(loop);
+}
+
+// ---- 真横ガイド ------------------------------------------------
+// 側面ステップ時、両肩のx距離が近いほど真横と判定する
+function updateSideGuide() {
+  if (!sideGuide) return;
+  if (currentStep !== "side") {
+    sideGuide.hidden = true;
+    return;
+  }
+  if (!lastLandmarks) {
+    sideGuide.hidden = false;
+    sideGuide.textContent = "✗ 全身が写るように";
+    sideGuide.className = "side-guide error";
+    return;
+  }
+  const ls = lastLandmarks[POSE.LEFT_SHOULDER];
+  const rs = lastLandmarks[POSE.RIGHT_SHOULDER];
+  if (!ls || !rs) {
+    sideGuide.hidden = true;
+    return;
+  }
+  const dx = Math.abs(ls.x - rs.x);
+  sideGuide.hidden = false;
+  if (dx < 0.04) {
+    sideGuide.textContent = "✓ 真横OK";
+    sideGuide.className = "side-guide ok";
+  } else if (dx < 0.08) {
+    sideGuide.textContent = "△ あと少し横向きに";
+    sideGuide.className = "side-guide warn";
+  } else {
+    sideGuide.textContent = "✗ 真横に向いてください";
+    sideGuide.className = "side-guide error";
+  }
 }
 
 // ---- ランドマーク描画 ------------------------------------------
@@ -227,6 +290,82 @@ function drawLandmarks(landmarks) {
   }
 }
 
+// ---- 後頭部突出量（ImageSegmenter で側面シルエットから推定）-----
+function loadImage(dataUrl) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = dataUrl;
+  });
+}
+
+async function computeOccipitalProtrusion(imageDataUrl, landmarks) {
+  const segmenter = await initSegmenter();
+  const img = await loadImage(imageDataUrl);
+
+  const result = await new Promise((resolve) => {
+    segmenter.segment(img, (res) => resolve(res));
+  });
+
+  const mask = result.categoryMask;
+  if (!mask) return null;
+  const w = mask.width;
+  const h = mask.height;
+  const data = mask.getAsUint8Array();
+
+  // visibility が高い側の耳/肩を採用（カメラ向き面）
+  const lear = landmarks[POSE.LEFT_EAR];
+  const rear = landmarks[POSE.RIGHT_EAR];
+  const useLeft = (lear.visibility ?? 0) >= (rear.visibility ?? 0);
+  const ear = useLeft ? lear : rear;
+  const shoulder = useLeft
+    ? landmarks[POSE.LEFT_SHOULDER]
+    : landmarks[POSE.RIGHT_SHOULDER];
+  const nose = landmarks[POSE.NOSE];
+
+  // 前景値を肩位置サンプルで自動判定（モデルにより 0/1 or 0/255 の場合あり）
+  const sx = Math.max(0, Math.min(w - 1, Math.floor(shoulder.x * w)));
+  const sy = Math.max(0, Math.min(h - 1, Math.floor(shoulder.y * h)));
+  const fgValue = data[sy * w + sx];
+
+  // 顔の向き: 鼻のx > 耳のx → 右向き（後頭部は画像左側）
+  const facingRight = nose.x > ear.x;
+
+  const earY = Math.floor(ear.y * h);
+  const earX = Math.floor(ear.x * w);
+  const rowStart = Math.max(0, earY - Math.floor(h * 0.06));
+  const rowEnd = Math.min(h, earY + Math.floor(h * 0.04));
+
+  let backX = earX;
+  for (let y = rowStart; y < rowEnd; y++) {
+    const rowOff = y * w;
+    if (facingRight) {
+      // 後頭部は左側 → 各行の最も左にある前景画素
+      for (let x = 0; x < earX; x++) {
+        if (data[rowOff + x] === fgValue) {
+          if (x < backX) backX = x;
+          break;
+        }
+      }
+    } else {
+      // 後頭部は右側
+      for (let x = w - 1; x > earX; x--) {
+        if (data[rowOff + x] === fgValue) {
+          if (x > backX) backX = x;
+          break;
+        }
+      }
+    }
+  }
+  mask.close();
+
+  return {
+    occipital_protrusion: Math.abs(backX - earX) / w,
+    back_of_head_norm: { x: backX / w, y: earY / h },
+  };
+}
+
 // ---- キャプチャ処理 --------------------------------------------
 function snapshotVideoToDataURL() {
   const w = video.videoWidth;
@@ -272,7 +411,20 @@ function capture() {
       btnCapture.textContent = "測定完了";
       renderResults();
       materialCard.hidden = false;
-      setStatus("計測完了 — 枕の素材を選択してください", "ok");
+      sideGuide.hidden = true;
+      setStatus("計測完了 — 後頭部解析中…", "ok");
+      computeOccipitalProtrusion(image, landmarks)
+        .then((res) => {
+          if (!res || !captures.side) return;
+          captures.side.values.occipital_protrusion = res.occipital_protrusion;
+          captures.side.backOfHead = res.back_of_head_norm;
+          renderResults();
+          setStatus("計測完了 — 枕の素材を選択してください", "ok");
+        })
+        .catch((err) => {
+          console.warn("occipital protrusion failed:", err);
+          setStatus("計測完了 — 枕の素材を選択してください", "ok");
+        });
     }
   } catch (e) {
     console.error(e);
@@ -303,6 +455,11 @@ function renderResults() {
     "neck_width",
     "head_width",
     "posture",
+    "cva",
+    "forward_head",
+    "head_pitch",
+    "neck_tilt",
+    "occipital_protrusion",
   ];
   const front = captures.front?.values || {};
   const side = captures.side?.values || {};
@@ -352,6 +509,13 @@ function reset() {
   materialSelected.hidden = true;
   materialSelected.textContent = "";
   for (const r of materialRadios) r.checked = false;
+
+  // 真横ガイドを初期化
+  if (sideGuide) {
+    sideGuide.hidden = true;
+    sideGuide.textContent = "";
+    sideGuide.className = "side-guide";
+  }
 
   setStatus("リセット完了");
   // リセット後は自動でカメラを再起動して計測を続行できるようにする
