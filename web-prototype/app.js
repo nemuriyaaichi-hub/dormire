@@ -102,8 +102,10 @@ const captures = { front: null, side: null }; // { landmarks, image, values }
 let pillowMaterial = null;
 let userHeightCm = null;
 let aiResult = null; // 1セッション1回キャッシュ
+let aiErrorMsg = null;
 let aiInFlight = false;
 let aiAbortCtrl = null;
+let aiCardShown = false; // 素材選択でカード表示済みフラグ
 
 // ---- Status helpers --------------------------------------------
 function setStatus(msg, level = "") {
@@ -570,18 +572,24 @@ function capture() {
       setStatus("計測完了 — 後頭部解析中…", "ok");
       computeCervicalProfile(image, landmarks)
         .then((res) => {
-          if (!res || !captures.side) return;
-          captures.side.values.occipital_protrusion = res.occipital_protrusion;
-          captures.side.values.cervical_depth = res.cervical_depth;
-          captures.side.values.cervical_depth_skin = res.cervical_depth_skin;
-          captures.side.values.hair_thickness_avg = res.hair_thickness_avg;
-          captures.side.cervicalProfile = res;
-          renderResults();
+          if (res && captures.side) {
+            captures.side.values.occipital_protrusion = res.occipital_protrusion;
+            captures.side.values.cervical_depth = res.cervical_depth;
+            captures.side.values.cervical_depth_skin = res.cervical_depth_skin;
+            captures.side.values.hair_thickness_avg = res.hair_thickness_avg;
+            captures.side.cervicalProfile = res;
+            renderResults();
+          }
           setStatus("計測完了 — 枕の素材を選択してください", "ok");
         })
         .catch((err) => {
           console.warn("cervical profile failed:", err);
           setStatus("計測完了 — 枕の素材を選択してください", "ok");
+        })
+        .finally(() => {
+          // ★ プリフェッチ: 素材選択を待たず裏でAI診断を開始
+          //    素材選択時にはほぼ手元に結果がある状態にする
+          kickoffAiFetch();
         });
     }
   } catch (e) {
@@ -734,7 +742,9 @@ function reset() {
     aiAbortCtrl = null;
   }
   aiResult = null;
+  aiErrorMsg = null;
   aiInFlight = false;
+  aiCardShown = false;
   aiCard.hidden = true;
   aiContent.hidden = true;
   aiLoading.hidden = true;
@@ -775,8 +785,8 @@ for (const r of materialRadios) {
     pillowMaterial = e.target.value;
     materialSelected.hidden = false;
     materialSelected.textContent = `選択中: ${pillowMaterial}`;
-    // 初回選択時のみ Gemini を呼ぶ。素材を変えても再呼び出ししない。
-    if (!aiResult && !aiInFlight) requestAiDiagnosis();
+    // 素材選択でAIカードを公開（プリフェッチ済みなら即表示）
+    revealAiCard();
   });
 }
 
@@ -796,9 +806,28 @@ function formatMetricsForAI(front, side) {
   return out;
 }
 
-function showAiCard() {
-  aiCard.hidden = false;
-  aiCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
+// AI送信用に画像を縮小・圧縮（長辺768px / quality 0.72）
+// 元画像の1/5〜1/10サイズになり、アップロードと Gemini 処理が大幅に高速化
+async function prepareImageForAI(dataUrl, maxEdge = 768, quality = 0.72) {
+  if (!dataUrl) return null;
+  const img = await new Promise((resolve, reject) => {
+    const i = new Image();
+    i.onload = () => resolve(i);
+    i.onerror = reject;
+    i.src = dataUrl;
+  });
+  const w = img.naturalWidth;
+  const h = img.naturalHeight;
+  if (!w || !h) return dataUrl;
+  const scale = Math.min(1, maxEdge / Math.max(w, h));
+  const tw = Math.round(w * scale);
+  const th = Math.round(h * scale);
+  const c = document.createElement("canvas");
+  c.width = tw;
+  c.height = th;
+  const cctx = c.getContext("2d");
+  cctx.drawImage(img, 0, 0, tw, th);
+  return c.toDataURL("image/jpeg", quality);
 }
 
 function setAiBaseline(classification) {
@@ -830,28 +859,50 @@ function renderAiError(msg) {
   aiContent.hidden = true;
 }
 
-async function requestAiDiagnosis() {
+// 素材選択時にAIカードを公開し、現状のステートを反映する
+function revealAiCard() {
+  aiCardShown = true;
+  const classification =
+    captures.side?.values?.posture || captures.front?.values?.posture;
+  if (classification) setAiBaseline(classification);
+  aiCard.hidden = false;
+  aiCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  if (aiResult) {
+    renderAiResult(aiResult);
+  } else if (aiErrorMsg) {
+    renderAiError(aiErrorMsg);
+  } else {
+    aiLoading.hidden = false;
+    aiContent.hidden = true;
+    aiError.hidden = true;
+  }
+}
+
+// 横撮影完了直後に裏で実行されるプリフェッチ。UIは触らない。
+async function kickoffAiFetch() {
+  if (aiResult || aiInFlight) return;
   const front = captures.front?.values || {};
   const side = captures.side?.values || {};
   const classification = side.posture || front.posture;
-  const imageFront = captures.front?.image;
-  const imageSide = captures.side?.image;
-  if (!classification || !imageSide) {
-    renderAiError("計測データが不足しています");
+  const rawFront = captures.front?.image;
+  const rawSide = captures.side?.image;
+  if (!classification || !rawSide) {
+    aiErrorMsg = "計測データが不足しています";
+    if (aiCardShown) renderAiError(aiErrorMsg);
     return;
   }
 
   aiInFlight = true;
-  setAiBaseline(classification);
-  showAiCard();
-  aiContent.hidden = true;
-  aiError.hidden = true;
-  aiLoading.hidden = false;
-
+  aiErrorMsg = null;
   if (aiAbortCtrl) aiAbortCtrl.abort();
   aiAbortCtrl = new AbortController();
 
   try {
+    const [imageFront, imageSide] = await Promise.all([
+      rawFront ? prepareImageForAI(rawFront) : Promise.resolve(null),
+      prepareImageForAI(rawSide),
+    ]);
+
     const res = await fetch(AI_ENDPOINT, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -869,11 +920,12 @@ async function requestAiDiagnosis() {
       throw new Error(detail);
     }
     aiResult = json;
-    renderAiResult(json);
+    if (aiCardShown) renderAiResult(json);
   } catch (e) {
     if (e.name === "AbortError") return;
     console.warn("AI診断失敗:", e);
-    renderAiError(`AI診断に失敗しました: ${e.message || e}`);
+    aiErrorMsg = `AI診断に失敗しました: ${e.message || e}`;
+    if (aiCardShown) renderAiError(aiErrorMsg);
   } finally {
     aiInFlight = false;
   }

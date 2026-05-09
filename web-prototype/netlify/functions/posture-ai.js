@@ -16,20 +16,20 @@ const RESPONSE_SCHEMA = {
   properties: {
     headline: {
       type: "string",
-      description: "1行サマリー（30文字以内）",
+      description: "1行サマリー（25文字以内）",
     },
     comment: {
       type: "string",
-      description: "正面・横の写真と計測値を踏まえた姿勢解説（150〜220文字、敬語）",
+      description: "姿勢解説（100〜140文字、敬語、ですます調）",
     },
     tags: {
       type: "array",
       items: { type: "string" },
-      description: "副所見タグ（例: 巻き肩 / 頭部前方変位 / 骨盤後傾）3〜5個",
+      description: "副所見タグ（例: 巻き肩 / 頭部前方変位 / 骨盤後傾）3〜4個",
     },
     sleep_advice: {
       type: "string",
-      description: "枕の高さ・寝姿勢に関する具体アドバイス（100〜140文字）",
+      description: "枕・寝姿勢のアドバイス（70〜100文字）",
     },
   },
   required: ["headline", "comment", "tags", "sleep_advice"],

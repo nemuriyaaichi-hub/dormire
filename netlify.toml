@@ -1,0 +1,15 @@
+# リポジトリルート用 Netlify 設定
+#
+# このリポジトリは monorepo 風 (Django ソースコード/ + 静的プロトタイプ web-prototype/) で、
+# Netlify には web-prototype/ のみを公開する。
+# Netlify は <repo-root>/netlify.toml を最優先で読むため、ここで base を指定して
+# 実体の設定 (web-prototype/netlify.toml) に処理を移譲する。
+
+[build]
+  base = "web-prototype"
+  publish = "."
+  command = ""
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
