@@ -43,6 +43,9 @@
           ></video>
           <canvas id="overlay"></canvas>
           <div class="side-guide" id="sideGuide" hidden></div>
+          <div class="side-tips" id="sideTips" hidden>
+            髪はおろして整え、結び髪・寝癖は事前にほぐしてください
+          </div>
         </div>
         <div class="thumbs" id="thumbs" hidden>
           <figure>
@@ -57,6 +60,25 @@
         <div class="controls">
           <button id="btnCapture" disabled>正面を測定</button>
           <button id="btnReset" class="ghost">リセット</button>
+        </div>
+      </section>
+
+      <section class="card" id="heightCard" hidden>
+        <h3 style="margin: 0 0 8px 0; font-size: 14px">身長 (cm)</h3>
+        <div class="height-row">
+          <input
+            type="number"
+            id="heightInput"
+            min="100"
+            max="220"
+            step="0.5"
+            placeholder="例: 168"
+            inputmode="decimal"
+          />
+          <span class="height-unit">cm</span>
+        </div>
+        <div class="height-hint">
+          入力すると、肩-足首の比率から各計測値を概算 cm に換算します（参考値）
         </div>
       </section>
 
@@ -85,6 +107,30 @@
           </label>
         </div>
         <div class="material-selected" id="materialSelected" hidden></div>
+      </section>
+
+      <section class="card" id="aiCard" hidden>
+        <h3 class="ai-title">
+          <span class="ai-badge">AI</span>姿勢診断
+        </h3>
+        <div id="aiBaseline" class="ai-baseline"></div>
+        <div id="aiLoading" class="ai-loading" hidden>
+          <span class="ai-spinner" aria-hidden="true"></span>
+          <span>分析中…（数秒かかります）</span>
+        </div>
+        <div id="aiContent" hidden>
+          <div class="ai-headline" id="aiHeadline"></div>
+          <p class="ai-comment" id="aiComment"></p>
+          <div class="ai-tags" id="aiTags"></div>
+          <div class="ai-section">
+            <div class="ai-section-title">寝姿勢へのアドバイス</div>
+            <p class="ai-advice" id="aiAdvice"></p>
+          </div>
+        </div>
+        <div id="aiError" class="ai-error" hidden></div>
+        <div class="ai-disclaimer">
+          ※ 既存ロジックの分類を補強するAI所見です。医療診断ではありません。
+        </div>
       </section>
 
       <section class="card" id="resultsCard" hidden>

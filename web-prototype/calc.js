@@ -273,6 +273,9 @@ export const LABELS = Object.freeze({
   head_pitch: "頭部前傾角 (°)",
   neck_tilt: "頚部傾斜角 (°)",
   occipital_protrusion: "後頭部突出量",
+  cervical_depth: "頚部凹み深さ (髪含む)",
+  cervical_depth_skin: "頚部凹み深さ (肌のみ・髪除外)",
+  hair_thickness_avg: "髪の厚み (中央値)",
 });
 
 /** 単位 [0,1] の距離値を見やすく整形（3 桁小数）*/

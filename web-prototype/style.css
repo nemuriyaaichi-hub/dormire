@@ -278,6 +278,44 @@ table.results tr.highlight td {
   margin-top: 6px;
 }
 
+.height-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.height-row input {
+  flex: 1 1 auto;
+  min-height: 44px;
+  padding: 8px 12px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--fg);
+  background: rgba(78, 163, 255, 0.08);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.height-row input:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: rgba(78, 163, 255, 0.16);
+}
+
+.height-unit {
+  font-size: 14px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.height-hint {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
 .material-options {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -347,9 +385,145 @@ table.results tr.highlight td {
   color: #1a0000;
 }
 
+.side-tips {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--fg);
+  background: rgba(78, 163, 255, 0.85);
+  border-radius: 8px;
+  z-index: 10;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  max-width: 320px;
+  margin: 0 auto;
+}
+
 footer {
   padding: 16px;
   text-align: center;
   color: var(--muted);
   font-size: 11px;
+}
+
+/* ---- AI 姿勢診断カード ---------------------------------------- */
+.ai-title {
+  margin: 0 0 6px 0;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ai-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: #0f1115;
+  background: linear-gradient(135deg, #4ea3ff 0%, #b97cff 100%);
+  border-radius: 999px;
+}
+
+.ai-baseline {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.ai-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.ai-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(78, 163, 255, 0.25);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: ai-spin 0.8s linear infinite;
+}
+
+@keyframes ai-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.ai-headline {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+
+.ai-comment {
+  margin: 0 0 10px 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--fg);
+}
+
+.ai-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.ai-tag {
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  background: rgba(78, 163, 255, 0.12);
+  border: 1px solid rgba(78, 163, 255, 0.35);
+  border-radius: 999px;
+}
+
+.ai-section {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.ai-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.ai-advice {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--fg);
+}
+
+.ai-error {
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--danger);
+  background: rgba(255, 107, 107, 0.08);
+  border: 1px solid rgba(255, 107, 107, 0.4);
+  border-radius: 8px;
+}
+
+.ai-disclaimer {
+  margin-top: 10px;
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.4;
 }
