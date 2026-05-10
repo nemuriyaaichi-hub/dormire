@@ -6,10 +6,18 @@
 //
 // 環境変数:
 //   GEMINI_API_KEY (必須) — Netlify Site settings に登録
-//   GEMINI_MODEL   (任意) — デフォルト: gemini-3.1-flash-preview
+//   GEMINI_MODEL   (任意) — デフォルト: gemini-2.5-flash
+//                  preview 等を使う場合は環境変数で正式IDを指定する
 // ---------------------------------------------------------------
 
-const DEFAULT_MODEL = "gemini-3.1-flash-preview";
+const DEFAULT_MODEL = "gemini-2.5-flash";
+
+const CORS_HEADERS = {
+  "access-control-allow-origin": "*",
+  "access-control-allow-methods": "POST, OPTIONS",
+  "access-control-allow-headers": "content-type",
+  "access-control-max-age": "86400",
+};
 
 const RESPONSE_SCHEMA = {
   type: "object",
@@ -66,6 +74,10 @@ function buildPromptText({ classification, metrics }) {
 }
 
 export default async (req) => {
+  // CORS preflight に応答（ブラウザが application/json POST 前に投げる OPTIONS を許可）
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: CORS_HEADERS });
+  }
   if (req.method !== "POST") {
     return json({ error: "POST only" }, 405);
   }
@@ -161,6 +173,9 @@ export default async (req) => {
 function json(obj, status) {
   return new Response(JSON.stringify(obj), {
     status,
-    headers: { "content-type": "application/json; charset=utf-8" },
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      ...CORS_HEADERS,
+    },
   });
 }
