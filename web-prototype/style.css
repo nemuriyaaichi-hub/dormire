@@ -595,12 +595,13 @@ footer {
 }
 
 /* 枕の実エリアに合わせた余白 (上下8%・左右4%) */
+/* 3列×2行レイアウト: 右横向き|中央後頭部|左横向き / 右肩口|首元|左肩口 */
 .pillow-overlay {
   position: absolute;
   inset: 8% 4%;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
   gap: 4px;
 }
 
@@ -610,47 +611,44 @@ footer {
   align-items: center;
   justify-content: center;
   gap: 2px;
-  background: rgba(15, 17, 21, 0.38);
-  border: 1.5px solid rgba(255, 255, 255, 0.18);
+  background: transparent;
+  border: none;
   border-radius: 8px;
   cursor: pointer;
   touch-action: manipulation;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background 0.15s;
   text-align: center;
   padding: 4px 2px;
 }
 
 .pzone:active {
-  opacity: 0.75;
+  opacity: 0.7;
 }
 
 .pzone.active {
-  background: rgba(78, 163, 255, 0.42);
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent);
+  background: rgba(63, 211, 122, 0.15);
+  border-radius: 8px;
 }
 
 .pzone-name {
   font-size: 9px;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.82);
+  color: var(--ok);
   line-height: 1.2;
-}
-
-.pzone.active .pzone-name {
-  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 .pzone-value {
   font-size: 14px;
   font-weight: 800;
-  color: #fff;
+  color: var(--ok);
   font-variant-numeric: tabular-nums;
-  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
 }
 
+.pzone.active .pzone-name,
 .pzone.active .pzone-value {
-  color: #9ddeff;
+  color: #6fffaa;
 }
 
 /* 選択ゾーンコントロール */
