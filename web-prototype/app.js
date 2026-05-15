@@ -25,6 +25,7 @@ const overlay = $("overlay");
 const stage = $("stage");
 const ctx = overlay.getContext("2d");
 const btnCapture = $("btnCapture");
+const btnSave = $("btnSave");
 const btnReset = $("btnReset");
 const statusEl = $("status");
 const resultsCard = $("resultsCard");
@@ -82,6 +83,9 @@ function resolveAiEndpoint() {
 }
 
 const AI_ENDPOINT = resolveAiEndpoint();
+const SAVE_ENDPOINT =
+  String(window.DORMIRE_SAVE_ENDPOINT || "").trim() ||
+  "https://dormire.netlify.app/.netlify/functions/save-measurement";
 const ANGLE_KEYS = new Set([
   "back_angle",
   "head_angle",
@@ -644,6 +648,7 @@ function capture() {
       stepText.textContent = "完了";
       btnCapture.disabled = false;
       btnCapture.textContent = "測定完了";
+      btnSave.hidden = false;
       renderResults();
       if (heightCard) heightCard.hidden = false;
       materialCard.hidden = false;
@@ -780,6 +785,52 @@ function buildPillowAdjustmentData() {
   };
 }
 
+function buildMeasurementSaveData() {
+  const front = captures.front?.values || {};
+  const side = captures.side?.values || {};
+  return {
+    savedAt: new Date().toISOString(),
+    source: "web-prototype",
+    userHeightCm,
+    pillowMaterial: pillowMaterial || "",
+    posture: side.posture || front.posture || "",
+    front,
+    side,
+    aiResult,
+  };
+}
+
+async function saveMeasurement() {
+  if (!captures.side?.values) {
+    setStatus("保存する測定データがありません", "error");
+    return;
+  }
+
+  const prevText = btnSave.textContent;
+  btnSave.disabled = true;
+  btnSave.textContent = "保存中";
+
+  try {
+    const res = await fetch(SAVE_ENDPOINT, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(buildMeasurementSaveData()),
+    });
+    const json = await res.json().catch(() => null);
+    if (!res.ok) {
+      throw new Error(json?.error || `HTTP ${res.status}`);
+    }
+    btnSave.textContent = "保存済み";
+    setStatus("測定データを保存しました", "ok");
+  } catch (e) {
+    console.warn("save measurement failed:", e);
+    btnSave.textContent = prevText;
+    setStatus(`保存失敗: ${e.message || e}`, "error");
+  } finally {
+    btnSave.disabled = false;
+  }
+}
+
 function openPillowAdjustPage() {
   if (!captures.side?.values) {
     setStatus("横からの計測が完了していません", "error");
@@ -813,6 +864,9 @@ function reset() {
   resultsCard.hidden = true;
   resultsBody.innerHTML = "";
   btnCapture.disabled = true;
+  btnSave.hidden = true;
+  btnSave.disabled = false;
+  btnSave.textContent = "保存";
   fpsEl.textContent = "FPS: --";
 
   // 2段階状態を初期化
@@ -881,6 +935,7 @@ btnCapture.addEventListener("click", () => {
   capture();
 });
 btnReset.addEventListener("click", reset);
+btnSave.addEventListener("click", saveMeasurement);
 
 if (heightInput) {
   heightInput.addEventListener("input", (e) => {
