@@ -135,18 +135,37 @@ export default async (req) => {
     },
   };
 
-  let upstream;
-  try {
-    upstream = await fetch(url, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-  } catch (e) {
-    return json({ error: `Gemini接続失敗: ${e.message || e}` }, 502);
+  let result = await callGemini(url, payload);
+  if (result.error) {
+    return json({ error: result.error }, 502);
   }
 
-  const upstreamJson = await upstream.json().catch(() => null);
+  let { upstream, upstreamJson } = result;
+  if (!upstream.ok && isImageProcessingError(upstreamJson)) {
+    const textOnlyPayload = {
+      ...payload,
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              text:
+                buildPromptText({ classification, metrics }) +
+                "\n\n※写真の解析に失敗したため、計測値のみで診断してください。",
+            },
+          ],
+        },
+      ],
+    };
+
+    result = await callGemini(url, textOnlyPayload);
+    if (result.error) {
+      return json({ error: result.error }, 502);
+    }
+    upstream = result.upstream;
+    upstreamJson = result.upstreamJson;
+  }
+
   if (!upstream.ok) {
     return json(
       {
@@ -169,6 +188,25 @@ export default async (req) => {
 
   return json(parsed, 200);
 };
+
+async function callGemini(url, payload) {
+  try {
+    const upstream = await fetch(url, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const upstreamJson = await upstream.json().catch(() => null);
+    return { upstream, upstreamJson };
+  } catch (e) {
+    return { error: `Gemini接続失敗: ${e.message || e}` };
+  }
+}
+
+function isImageProcessingError(upstreamJson) {
+  const message = upstreamJson?.error?.message || "";
+  return /process input image|image/i.test(message);
+}
 
 function json(obj, status) {
   return new Response(JSON.stringify(obj), {

@@ -826,9 +826,9 @@ function formatMetricsForAI(front, side) {
   return out;
 }
 
-// AI送信用に画像を縮小・圧縮（長辺768px / quality 0.72）
+// AI送信用に画像を縮小・圧縮（長辺512px / quality 0.62）
 // 元画像の1/5〜1/10サイズになり、アップロードと Gemini 処理が大幅に高速化
-async function prepareImageForAI(dataUrl, maxEdge = 768, quality = 0.72) {
+async function prepareImageForAI(dataUrl, maxEdge = 512, quality = 0.62) {
   if (!dataUrl) return null;
   const img = await new Promise((resolve, reject) => {
     const i = new Image();
