@@ -638,11 +638,12 @@ function capture() {
       setStatus("正面 OK — 続けて横向きに立って測定してください", "ok");
     } else {
       applyCervicalProfile(estimateCervicalProfileFromPose(landmarks));
+      currentStep = "done";
       dotSide.classList.remove("active");
       dotSide.classList.add("done");
       stepText.textContent = "完了";
-      btnCapture.disabled = true;
-      btnCapture.textContent = "測定完了";
+      btnCapture.disabled = false;
+      btnCapture.textContent = "再測定";
       renderResults();
       if (heightCard) heightCard.hidden = false;
       materialCard.hidden = false;
@@ -842,7 +843,13 @@ function reset() {
 }
 
 // ---- イベント結線 ----------------------------------------------
-btnCapture.addEventListener("click", capture);
+btnCapture.addEventListener("click", () => {
+  if (currentStep === "done") {
+    reset();
+    return;
+  }
+  capture();
+});
 btnReset.addEventListener("click", reset);
 
 if (heightInput) {
@@ -966,6 +973,7 @@ function revealAiCard() {
     aiLoading.hidden = false;
     aiContent.hidden = true;
     aiError.hidden = true;
+    kickoffAiFetch();
   }
 }
 
@@ -1000,6 +1008,13 @@ async function kickoffAiFetch() {
     timedOut = true;
     aiAbortCtrl.abort();
   }, 30000);
+  const uiFallbackId = setTimeout(() => {
+    if (aiResult || aiErrorMsg) return;
+    aiResult = buildLocalAiFallback(classification, metrics);
+    aiInFlight = false;
+    aiAbortCtrl?.abort();
+    if (aiCardShown) renderAiResult(aiResult);
+  }, 12000);
 
   try {
     const [imageFront, imageSide] = await Promise.all([
@@ -1026,6 +1041,7 @@ async function kickoffAiFetch() {
     aiResult = json;
     if (aiCardShown) renderAiResult(json);
   } catch (e) {
+    if (aiResult) return;
     if (e.name === "AbortError") {
       if (!timedOut) return;
       aiResult = buildLocalAiFallback(classification, metrics);
@@ -1037,6 +1053,7 @@ async function kickoffAiFetch() {
     }
   } finally {
     clearTimeout(timeoutId);
+    clearTimeout(uiFallbackId);
     aiInFlight = false;
   }
 }
