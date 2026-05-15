@@ -367,6 +367,60 @@ function loadImage(dataUrl) {
   });
 }
 
+function estimateCervicalProfileFromPose(landmarks) {
+  const lear = landmarks[POSE.LEFT_EAR];
+  const rear = landmarks[POSE.RIGHT_EAR];
+  const nose = landmarks[POSE.NOSE];
+  const lvis = lear.visibility ?? 0;
+  const rvis = rear.visibility ?? 0;
+  const useLeft = lvis >= rvis;
+  const ear = useLeft ? lear : rear;
+  const otherEar = useLeft ? rear : lear;
+  const shoulder = useLeft
+    ? landmarks[POSE.LEFT_SHOULDER]
+    : landmarks[POSE.RIGHT_SHOULDER];
+  const headWidth = Math.max(0.001, Math.abs(lear.x - rear.x));
+  const forwardHead = Math.abs(ear.x - shoulder.x);
+  const headPitch = Math.abs(nose.y - ear.y);
+
+  return {
+    occipital_protrusion: Math.max(headWidth * 0.4, forwardHead * 0.55),
+    cervical_depth: Math.max(headWidth * 0.18, forwardHead * 0.25),
+    cervical_depth_skin: Math.max(headWidth * 0.14, forwardHead * 0.18),
+    hair_thickness_avg: headWidth * 0.08,
+    occiput: { x: otherEar.x, y: ear.y },
+    occiput_skin: { x: otherEar.x, y: ear.y },
+    nape: { x: shoulder.x, y: shoulder.y, fromSkin: false },
+    deepest: {
+      x: (ear.x + shoulder.x) / 2,
+      y: (ear.y + shoulder.y) / 2 + headPitch * 0.2,
+    },
+    deepest_skin: {
+      x: (ear.x + shoulder.x) / 2,
+      y: (ear.y + shoulder.y) / 2 + headPitch * 0.15,
+    },
+    facing: useLeft ? "L" : "R",
+    estimated: true,
+  };
+}
+
+function applyCervicalProfile(res) {
+  if (!res || !captures.side) return;
+  captures.side.values.occipital_protrusion = res.occipital_protrusion;
+  captures.side.values.cervical_depth = res.cervical_depth;
+  captures.side.values.cervical_depth_skin = res.cervical_depth_skin;
+  captures.side.values.hair_thickness_avg = res.hair_thickness_avg;
+  captures.side.cervicalProfile = res;
+}
+
+function withTimeout(promise, ms, label) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} timed out`)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 async function computeCervicalProfile(imageDataUrl, landmarks) {
   const segmenter = await initSegmenter();
   const img = await loadImage(imageDataUrl);
@@ -385,6 +439,7 @@ async function computeCervicalProfile(imageDataUrl, landmarks) {
   const isPerson = (v) => v !== 0;
   const isHair = (v) => v === 1;
   const isSkin = (v) => v === 2 || v === 3;
+  const isBody = (v) => v === 2 || v === 3 || v === 4 || v === 5;
 
   // visibility が高い側の耳/肩を採用（カメラ向き面）
   const lear = landmarks[POSE.LEFT_EAR];
@@ -440,7 +495,8 @@ async function computeCervicalProfile(imageDataUrl, landmarks) {
   const headRowEnd = Math.max(0, earY - Math.floor(h * 0.02));
   for (let y = headRowStart; y < headRowEnd; y++) {
     const hairX = backEdge(y, isHair);
-    const skinX = backEdge(y, isSkin);
+    let skinX = backEdge(y, isSkin);
+    if (skinX === -1) skinX = backEdge(y, isBody);
     if (hairX === -1 || skinX === -1) continue;
     const diff = facingRight ? skinX - hairX : hairX - skinX;
     if (diff > 0 && diff < w * 0.15) hairSamples.push(diff);
@@ -449,6 +505,8 @@ async function computeCervicalProfile(imageDataUrl, landmarks) {
   if (hairSamples.length > 0) {
     hairSamples.sort((a, b) => a - b);
     hairThicknessPx = hairSamples[Math.floor(hairSamples.length / 2)]; // 中央値
+  } else {
+    hairThicknessPx = Math.abs(lear.x - rear.x) * w * 0.08;
   }
 
   // ③ 髪除外の occiput 推定 = occiput_hair から髪厚分を体内側に補正
@@ -579,6 +637,7 @@ function capture() {
       btnCapture.textContent = "横から測定";
       setStatus("正面 OK — 続けて横向きに立って測定してください", "ok");
     } else {
+      applyCervicalProfile(estimateCervicalProfileFromPose(landmarks));
       dotSide.classList.remove("active");
       dotSide.classList.add("done");
       stepText.textContent = "完了";
@@ -590,14 +649,13 @@ function capture() {
       sideGuide.hidden = true;
       if (sideTips) sideTips.hidden = true;
       setStatus("計測完了 — 後頭部解析中…", "ok");
-      computeCervicalProfile(image, landmarks)
+      // AI診断は後頭部解析を待たずに開始する。ImageSegmenter が端末によって
+      // 詰まっても、素材選択後のAIカードが分析中のまま残らないようにする。
+      kickoffAiFetch();
+      withTimeout(computeCervicalProfile(image, landmarks), 6000, "cervical profile")
         .then((res) => {
-          if (res && captures.side) {
-            captures.side.values.occipital_protrusion = res.occipital_protrusion;
-            captures.side.values.cervical_depth = res.cervical_depth;
-            captures.side.values.cervical_depth_skin = res.cervical_depth_skin;
-            captures.side.values.hair_thickness_avg = res.hair_thickness_avg;
-            captures.side.cervicalProfile = res;
+          if (res) {
+            applyCervicalProfile(res);
             renderResults();
           }
           setStatus("計測完了 — 枕の素材を選択してください", "ok");
@@ -605,11 +663,6 @@ function capture() {
         .catch((err) => {
           console.warn("cervical profile failed:", err);
           setStatus("計測完了 — 枕の素材を選択してください", "ok");
-        })
-        .finally(() => {
-          // ★ プリフェッチ: 素材選択を待たず裏でAI診断を開始
-          //    素材選択時にはほぼ手元に結果がある状態にする
-          kickoffAiFetch();
         });
     }
   } catch (e) {
@@ -879,6 +932,24 @@ function renderAiError(msg) {
   aiContent.hidden = true;
 }
 
+function buildLocalAiFallback(classification, metrics) {
+  const label =
+    {
+      N: "理想姿勢",
+      U: "反り腰傾向",
+      丸: "猫背傾向",
+      W: "強いS字カーブ傾向",
+    }[classification] || "姿勢バランス";
+  const count = Object.keys(metrics || {}).length;
+  return {
+    headline: `${label}を確認しました`,
+    comment: `通信に時間がかかったため、${count}項目の計測値をもとに姿勢を整理しました。現在は${label}として、寝具選定の参考にできます。`,
+    tags: [label, "計測値ベース", "寝具選定参考"],
+    sleep_advice:
+      "首から肩にかけて力が抜ける高さを基準に、仰向けでも横向きでも呼吸しやすい寝姿勢を保ってください。",
+  };
+}
+
 // 素材選択時にAIカードを公開し、現状のステートを反映する
 function revealAiCard() {
   aiCardShown = true;
@@ -913,6 +984,7 @@ async function kickoffAiFetch() {
   const classification = side.posture || front.posture;
   const rawFront = captures.front?.image;
   const rawSide = captures.side?.image;
+  const metrics = formatMetricsForAI(front, side);
   if (!classification || !rawSide) {
     aiErrorMsg = "計測データが不足しています";
     if (aiCardShown) renderAiError(aiErrorMsg);
@@ -923,6 +995,11 @@ async function kickoffAiFetch() {
   aiErrorMsg = null;
   if (aiAbortCtrl) aiAbortCtrl.abort();
   aiAbortCtrl = new AbortController();
+  let timedOut = false;
+  const timeoutId = setTimeout(() => {
+    timedOut = true;
+    aiAbortCtrl.abort();
+  }, 30000);
 
   try {
     const [imageFront, imageSide] = await Promise.all([
@@ -935,7 +1012,7 @@ async function kickoffAiFetch() {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         classification,
-        metrics: formatMetricsForAI(front, side),
+        metrics,
         imageFront,
         imageSide,
       }),
@@ -949,11 +1026,17 @@ async function kickoffAiFetch() {
     aiResult = json;
     if (aiCardShown) renderAiResult(json);
   } catch (e) {
-    if (e.name === "AbortError") return;
-    console.warn("AI診断失敗:", e);
-    aiErrorMsg = `AI診断に失敗しました: ${e.message || e}`;
-    if (aiCardShown) renderAiError(aiErrorMsg);
+    if (e.name === "AbortError") {
+      if (!timedOut) return;
+      aiResult = buildLocalAiFallback(classification, metrics);
+      if (aiCardShown) renderAiResult(aiResult);
+    } else {
+      console.warn("AI診断失敗:", e);
+      aiErrorMsg = `AI診断に失敗しました: ${e.message || e}`;
+      if (aiCardShown) renderAiError(aiErrorMsg);
+    }
   } finally {
+    clearTimeout(timeoutId);
     aiInFlight = false;
   }
 }
