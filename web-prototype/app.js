@@ -61,7 +61,27 @@ const POSTURE_LABELS = {
   丸: "丸（猫背）",
   W: "W（強いS字カーブ）",
 };
-const AI_ENDPOINT = "/.netlify/functions/posture-ai";
+const DEFAULT_NETLIFY_AI_ENDPOINT = "/.netlify/functions/posture-ai";
+
+function resolveAiEndpoint() {
+  const configured = String(window.DORMIRE_AI_ENDPOINT || "").trim();
+  if (configured) return configured;
+
+  // Netlify Functions are available only on Netlify/local Netlify dev.
+  // GitHub Pages cannot handle POST requests, so using the Netlify path there
+  // causes an HTTP 405 from the static host.
+  const host = window.location.hostname;
+  const canUseRelativeFunction =
+    ((host === "localhost" || host === "127.0.0.1") &&
+      window.location.port === "8888") ||
+    host.endsWith(".netlify.app") ||
+    host.endsWith(".netlify.live");
+
+  if (canUseRelativeFunction) return DEFAULT_NETLIFY_AI_ENDPOINT;
+  return "";
+}
+
+const AI_ENDPOINT = resolveAiEndpoint();
 const ANGLE_KEYS = new Set([
   "back_angle",
   "head_angle",
@@ -881,6 +901,13 @@ function revealAiCard() {
 // 横撮影完了直後に裏で実行されるプリフェッチ。UIは触らない。
 async function kickoffAiFetch() {
   if (aiResult || aiInFlight) return;
+  if (!AI_ENDPOINT) {
+    aiErrorMsg =
+      "AI診断APIのURLが未設定です。GitHub PagesではAI_PROXY_URLを設定してください。";
+    if (aiCardShown) renderAiError(aiErrorMsg);
+    return;
+  }
+
   const front = captures.front?.values || {};
   const side = captures.side?.values || {};
   const classification = side.posture || front.posture;

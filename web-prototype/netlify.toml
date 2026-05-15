@@ -31,7 +31,7 @@
     # - モデルファイル (.task) は storage.googleapis.com
     # - WASM 実行のために 'wasm-unsafe-eval' が必要
     # - カメラ映像は blob: (video), worker は blob: (MediaPipe 内部)
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' https://cdn.jsdelivr.net https://storage.googleapis.com; worker-src 'self' blob:; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' https://*.netlify.app https://cdn.jsdelivr.net https://storage.googleapis.com; worker-src 'self' blob:; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
 
     # HTTPS 固定（Netlify は標準で HTTPS 提供済み）
     Strict-Transport-Security = "max-age=31536000; includeSubDomains"

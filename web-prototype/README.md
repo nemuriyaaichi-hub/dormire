@@ -79,6 +79,18 @@ python3 -m http.server 8080
 
 以降は `main` に push するたびに自動再デプロイされます。手動で走らせたい場合は `Actions` → `Deploy web-prototype to GitHub Pages` → `Run workflow`。
 
+### AI診断をGitHub Pagesで使う場合
+
+GitHub Pages は静的ホスティングのため、`/.netlify/functions/posture-ai` への `POST` は処理できません。AI診断を使う場合は、先に Netlify にもデプロイして Function URL を用意し、GitHub の `Settings` → `Secrets and variables` → `Actions` → `Variables` で `AI_PROXY_URL` を設定してください。
+
+例:
+
+```text
+https://xxxxx.netlify.app/.netlify/functions/posture-ai
+```
+
+未設定のまま GitHub Pages で開いた場合、AI診断欄には設定不足のメッセージが表示されます。
+
 ### Netlify にデプロイ（任意）
 
 ### 方法 A: Netlify CLI（最短）
