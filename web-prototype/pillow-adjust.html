@@ -42,13 +42,11 @@
         </div>
       </section>
 
-      <!-- 枕ビジュアル図（2列×3行 = 実物の6エリアに対応） -->
+      <!-- 枕ビジュアル図（実物画像にゾーンをオーバーレイ） -->
       <section class="card pillow-card">
-        <div class="pillow-axis-label pillow-axis-top">頭側</div>
-        <div class="pillow-wrap">
-          <div class="pillow-col-label">左</div>
-          <div class="pillow-diagram" id="pillowDiagram">
-            <!-- Row 1: 横向き -->
+        <div class="pillow-image-wrap">
+          <img src="./pillow.png" alt="枕" class="pillow-img" />
+          <div class="pillow-overlay">
             <div class="pzone" data-zone="leftSide">
               <div class="pzone-name">左横向き</div>
               <div class="pzone-value" id="pval-leftSide">—</div>
@@ -57,7 +55,6 @@
               <div class="pzone-name">右横向き</div>
               <div class="pzone-value" id="pval-rightSide">—</div>
             </div>
-            <!-- Row 2: 後頭部・首元 -->
             <div class="pzone" data-zone="centerBack">
               <div class="pzone-name">中央・後頭部</div>
               <div class="pzone-value" id="pval-centerBack">—</div>
@@ -66,7 +63,6 @@
               <div class="pzone-name">首元</div>
               <div class="pzone-value" id="pval-neck">—</div>
             </div>
-            <!-- Row 3: 肩口 -->
             <div class="pzone" data-zone="leftShoulder">
               <div class="pzone-name">左肩口</div>
               <div class="pzone-value" id="pval-leftShoulder">—</div>
@@ -76,9 +72,7 @@
               <div class="pzone-value" id="pval-rightShoulder">—</div>
             </div>
           </div>
-          <div class="pillow-col-label">右</div>
         </div>
-        <div class="pillow-axis-label pillow-axis-bottom">肩側</div>
       </section>
 
       <!-- 選択ゾーンのコントロール -->
