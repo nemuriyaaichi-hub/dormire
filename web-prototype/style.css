@@ -574,33 +574,34 @@ footer {
   font-size: 14px;
 }
 
-/* 枕ビジュアル図（画像オーバーレイ） */
+/* 枕ビジュアル図（画像オーバーレイ・透明背景） */
 .pillow-card {
-  padding: 10px 12px;
+  background: transparent;
+  border-color: transparent;
+  padding: 0;
 }
 
 .pillow-image-wrap {
   position: relative;
   width: 100%;
-  border-radius: 14px;
-  overflow: hidden;
+  max-width: 360px;
+  margin: 0 auto;
 }
 
 .pillow-img {
   display: block;
   width: 100%;
   height: auto;
-  border-radius: 14px;
 }
 
+/* 枕の実エリアに合わせた余白 (上下8%・左右4%) */
 .pillow-overlay {
   position: absolute;
-  inset: 0;
+  inset: 8% 4%;
   display: grid;
   grid-template-columns: 1fr 1fr;
   grid-template-rows: 1fr 1fr 1fr;
-  gap: 3px;
-  padding: 6% 7%;
+  gap: 4px;
 }
 
 .pzone {
@@ -609,31 +610,30 @@ footer {
   align-items: center;
   justify-content: center;
   gap: 2px;
-  background: rgba(15, 17, 21, 0.45);
-  border: 1.5px solid rgba(255, 255, 255, 0.15);
+  background: rgba(15, 17, 21, 0.38);
+  border: 1.5px solid rgba(255, 255, 255, 0.18);
   border-radius: 8px;
   cursor: pointer;
   touch-action: manipulation;
   transition: background 0.15s, border-color 0.15s;
   text-align: center;
-  padding: 4px;
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
+  padding: 4px 2px;
 }
 
 .pzone:active {
-  opacity: 0.8;
+  opacity: 0.75;
 }
 
 .pzone.active {
-  background: rgba(78, 163, 255, 0.35);
+  background: rgba(78, 163, 255, 0.42);
   border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
 }
 
 .pzone-name {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.75);
+  color: rgba(255, 255, 255, 0.82);
   line-height: 1.2;
 }
 
@@ -642,15 +642,15 @@ footer {
 }
 
 .pzone-value {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 800;
   color: #fff;
   font-variant-numeric: tabular-nums;
-  text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
 }
 
 .pzone.active .pzone-value {
-  color: #7ecfff;
+  color: #9ddeff;
 }
 
 /* 選択ゾーンコントロール */
