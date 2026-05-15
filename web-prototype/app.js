@@ -643,7 +643,7 @@ function capture() {
       dotSide.classList.add("done");
       stepText.textContent = "完了";
       btnCapture.disabled = false;
-      btnCapture.textContent = "再測定";
+      btnCapture.textContent = "測定完了";
       renderResults();
       if (heightCard) heightCard.hidden = false;
       materialCard.hidden = false;
@@ -768,6 +768,36 @@ function renderResults() {
     .join("");
 }
 
+function buildPillowAdjustmentData() {
+  const front = captures.front?.values || {};
+  const side = captures.side?.values || {};
+  return {
+    createdAt: new Date().toISOString(),
+    pillowMaterial: pillowMaterial || "未選択",
+    userHeightCm,
+    front,
+    side,
+  };
+}
+
+function openPillowAdjustPage() {
+  if (!captures.side?.values) {
+    setStatus("横からの計測が完了していません", "error");
+    return;
+  }
+
+  try {
+    sessionStorage.setItem(
+      "dormirePillowAdjustment",
+      JSON.stringify(buildPillowAdjustmentData())
+    );
+  } catch (e) {
+    console.warn("failed to save pillow adjustment data:", e);
+  }
+
+  window.location.href = "./pillow-adjust.html";
+}
+
 // ---- リセット --------------------------------------------------
 function reset() {
   if (rafId) cancelAnimationFrame(rafId);
@@ -845,7 +875,7 @@ function reset() {
 // ---- イベント結線 ----------------------------------------------
 btnCapture.addEventListener("click", () => {
   if (currentStep === "done") {
-    reset();
+    openPillowAdjustPage();
     return;
   }
   capture();

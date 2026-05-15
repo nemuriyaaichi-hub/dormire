@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#0f1115" />
+    <title>枕g調整 — Dormire</title>
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="adjust-page">
+      <section class="card adjust-hero">
+        <div>
+          <div class="adjust-kicker">Pillow Filling</div>
+          <h1>枕g調整</h1>
+        </div>
+        <button class="ghost compact-button" id="backMeasure">計測へ戻る</button>
+      </section>
+
+      <section class="card adjust-summary">
+        <div>
+          <span>素材</span>
+          <strong id="summaryMaterial">—</strong>
+        </div>
+        <div>
+          <span>姿勢</span>
+          <strong id="summaryPosture">—</strong>
+        </div>
+        <div>
+          <span>後頭部</span>
+          <strong id="summaryOcciput">—</strong>
+        </div>
+        <div>
+          <span>頚部凹み</span>
+          <strong id="summaryCervical">—</strong>
+        </div>
+      </section>
+
+      <section class="adjust-grid" id="zoneGrid"></section>
+
+      <section class="card adjust-total">
+        <span>合計</span>
+        <strong id="totalGram">— g</strong>
+      </section>
+    </main>
+
+    <script>
+      const MATERIAL_FACTOR = {
+        ソフトパイプ: 1,
+        エラストマーパイプ: 1.08,
+        備長炭パイプ: 1.14,
+        ソフト綿: 0.72,
+        トルマリンパイプ: 1.18,
+        未選択: 1,
+      };
+
+      const POSTURE_LABELS = {
+        N: "N（理想姿勢）",
+        U: "U（反り腰）",
+        丸: "丸（猫背）",
+        W: "W（強いS字カーブ）",
+      };
+
+      const ZONE_LABELS = [
+        ["centerBack", "中央・後頭部"],
+        ["neck", "首元"],
+        ["leftSide", "左横向き"],
+        ["rightSide", "右横向き"],
+        ["leftShoulder", "左肩口"],
+        ["rightShoulder", "右肩口"],
+      ];
+
+      const state = loadState();
+      const grams = calculateInitialGrams(state);
+
+      document.getElementById("backMeasure").addEventListener("click", () => {
+        window.location.href = "./measure.html";
+      });
+
+      render();
+
+      function loadState() {
+        try {
+          return (
+            JSON.parse(sessionStorage.getItem("dormirePillowAdjustment")) || {}
+          );
+        } catch {
+          return {};
+        }
+      }
+
+      function calculateInitialGrams(data) {
+        const side = data.side || {};
+        const material = data.pillowMaterial || "未選択";
+        const factor = MATERIAL_FACTOR[material] || 1;
+        const occiput = Number(side.occipital_protrusion || 0.035);
+        const cervical = Number(
+          side.cervical_depth_skin || side.cervical_depth || 0.025
+        );
+        const shoulder = Number(
+          side.right_shoulder_width || side.left_shoulder_width || 0.08
+        );
+        const forward = Number(side.forward_head || 0.03);
+        const posture = side.posture || "N";
+        const postureBoost = posture === "丸" ? 1.08 : posture === "U" ? 0.96 : 1;
+
+        const base = {
+          centerBack: 70 + occiput * 900,
+          neck: 80 + cervical * 1400 + forward * 500,
+          leftSide: 95 + shoulder * 650,
+          rightSide: 95 + shoulder * 650,
+          leftShoulder: 55 + shoulder * 360,
+          rightShoulder: 55 + shoulder * 360,
+        };
+
+        return Object.fromEntries(
+          Object.entries(base).map(([key, value]) => [
+            key,
+            round5(value * factor * postureBoost),
+          ])
+        );
+      }
+
+      function round5(value) {
+        return Math.max(0, Math.round(value / 5) * 5);
+      }
+
+      function render() {
+        const side = state.side || {};
+        document.getElementById("summaryMaterial").textContent =
+          state.pillowMaterial || "未選択";
+        document.getElementById("summaryPosture").textContent =
+          POSTURE_LABELS[side.posture] || side.posture || "—";
+        document.getElementById("summaryOcciput").textContent = fmt(
+          side.occipital_protrusion
+        );
+        document.getElementById("summaryCervical").textContent = fmt(
+          side.cervical_depth_skin || side.cervical_depth
+        );
+
+        document.getElementById("zoneGrid").innerHTML = ZONE_LABELS.map(
+          ([key, label]) => `
+            <section class="card gram-zone">
+              <div class="gram-zone-head">
+                <span>${label}</span>
+                <strong id="value-${key}">${grams[key]} g</strong>
+              </div>
+              <div class="gram-controls">
+                <button class="ghost" data-key="${key}" data-delta="-10">-10</button>
+                <button class="ghost" data-key="${key}" data-delta="-5">-5</button>
+                <button data-key="${key}" data-delta="5">+5</button>
+                <button data-key="${key}" data-delta="10">+10</button>
+              </div>
+            </section>
+          `
+        ).join("");
+
+        for (const button of document.querySelectorAll("[data-key]")) {
+          button.addEventListener("click", () => {
+            const key = button.dataset.key;
+            const delta = Number(button.dataset.delta);
+            grams[key] = Math.max(0, grams[key] + delta);
+            updateTotals();
+          });
+        }
+
+        updateTotals();
+      }
+
+      function updateTotals() {
+        for (const [key] of ZONE_LABELS) {
+          document.getElementById(`value-${key}`).textContent = `${grams[key]} g`;
+        }
+        const total = Object.values(grams).reduce((sum, value) => sum + value, 0);
+        document.getElementById("totalGram").textContent = `${total} g`;
+      }
+
+      function fmt(value) {
+        return typeof value === "number" ? value.toFixed(3) : "—";
+      }
+    </script>
+  </body>
+</html>
