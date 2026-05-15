@@ -42,7 +42,58 @@
         </div>
       </section>
 
-      <section class="adjust-grid" id="zoneGrid"></section>
+      <!-- 枕ビジュアル図（2列×3行 = 実物の6エリアに対応） -->
+      <section class="card pillow-card">
+        <div class="pillow-axis-label pillow-axis-top">頭側</div>
+        <div class="pillow-wrap">
+          <div class="pillow-col-label">左</div>
+          <div class="pillow-diagram" id="pillowDiagram">
+            <!-- Row 1: 横向き -->
+            <div class="pzone" data-zone="leftSide">
+              <div class="pzone-name">左横向き</div>
+              <div class="pzone-value" id="pval-leftSide">—</div>
+            </div>
+            <div class="pzone" data-zone="rightSide">
+              <div class="pzone-name">右横向き</div>
+              <div class="pzone-value" id="pval-rightSide">—</div>
+            </div>
+            <!-- Row 2: 後頭部・首元 -->
+            <div class="pzone" data-zone="centerBack">
+              <div class="pzone-name">中央・後頭部</div>
+              <div class="pzone-value" id="pval-centerBack">—</div>
+            </div>
+            <div class="pzone" data-zone="neck">
+              <div class="pzone-name">首元</div>
+              <div class="pzone-value" id="pval-neck">—</div>
+            </div>
+            <!-- Row 3: 肩口 -->
+            <div class="pzone" data-zone="leftShoulder">
+              <div class="pzone-name">左肩口</div>
+              <div class="pzone-value" id="pval-leftShoulder">—</div>
+            </div>
+            <div class="pzone" data-zone="rightShoulder">
+              <div class="pzone-name">右肩口</div>
+              <div class="pzone-value" id="pval-rightShoulder">—</div>
+            </div>
+          </div>
+          <div class="pillow-col-label">右</div>
+        </div>
+        <div class="pillow-axis-label pillow-axis-bottom">肩側</div>
+      </section>
+
+      <!-- 選択ゾーンのコントロール -->
+      <section class="card zone-control" id="zoneControl">
+        <div class="gram-zone-head">
+          <span id="controlZoneLabel">ゾーンをタップして選択</span>
+          <strong id="controlZoneValue">— g</strong>
+        </div>
+        <div class="gram-controls" id="controlButtons">
+          <button class="ghost" data-delta="-10" disabled>-10</button>
+          <button class="ghost" data-delta="-5" disabled>-5</button>
+          <button data-delta="5" disabled>+5</button>
+          <button data-delta="10" disabled>+10</button>
+        </div>
+      </section>
 
       <section class="card adjust-total">
         <span>合計</span>
@@ -68,16 +119,17 @@
       };
 
       const ZONE_LABELS = [
-        ["centerBack", "中央・後頭部"],
-        ["neck", "首元"],
-        ["leftSide", "左横向き"],
-        ["rightSide", "右横向き"],
-        ["leftShoulder", "左肩口"],
+        ["leftSide",      "左横向き"],
+        ["rightSide",     "右横向き"],
+        ["centerBack",    "中央・後頭部"],
+        ["neck",          "首元"],
+        ["leftShoulder",  "左肩口"],
         ["rightShoulder", "右肩口"],
       ];
 
       const state = loadState();
       const grams = calculateInitialGrams(state);
+      let activeZone = null;
 
       document.getElementById("backMeasure").addEventListener("click", () => {
         window.location.href = "./measure.html";
@@ -144,28 +196,19 @@
           side.cervical_depth_skin || side.cervical_depth
         );
 
-        document.getElementById("zoneGrid").innerHTML = ZONE_LABELS.map(
-          ([key, label]) => `
-            <section class="card gram-zone">
-              <div class="gram-zone-head">
-                <span>${label}</span>
-                <strong id="value-${key}">${grams[key]} g</strong>
-              </div>
-              <div class="gram-controls">
-                <button class="ghost" data-key="${key}" data-delta="-10">-10</button>
-                <button class="ghost" data-key="${key}" data-delta="-5">-5</button>
-                <button data-key="${key}" data-delta="5">+5</button>
-                <button data-key="${key}" data-delta="10">+10</button>
-              </div>
-            </section>
-          `
-        ).join("");
+        for (const [key] of ZONE_LABELS) {
+          document.getElementById(`pval-${key}`).textContent = `${grams[key]} g`;
+        }
 
-        for (const button of document.querySelectorAll("[data-key]")) {
-          button.addEventListener("click", () => {
-            const key = button.dataset.key;
-            const delta = Number(button.dataset.delta);
-            grams[key] = Math.max(0, grams[key] + delta);
+        for (const pzone of document.querySelectorAll(".pzone")) {
+          pzone.addEventListener("click", () => selectZone(pzone.dataset.zone));
+        }
+
+        for (const btn of document.querySelectorAll("#controlButtons button")) {
+          btn.addEventListener("click", () => {
+            if (!activeZone) return;
+            const delta = Number(btn.dataset.delta);
+            grams[activeZone] = Math.max(0, grams[activeZone] + delta);
             updateTotals();
           });
         }
@@ -173,11 +216,29 @@
         updateTotals();
       }
 
+      function selectZone(key) {
+        activeZone = key;
+        const label = ZONE_LABELS.find(([k]) => k === key)?.[1] || key;
+
+        for (const el of document.querySelectorAll(".pzone")) {
+          el.classList.toggle("active", el.dataset.zone === key);
+        }
+
+        document.getElementById("controlZoneLabel").textContent = label;
+        document.getElementById("controlZoneValue").textContent = `${grams[key]} g`;
+        for (const btn of document.querySelectorAll("#controlButtons button")) {
+          btn.disabled = false;
+        }
+      }
+
       function updateTotals() {
         for (const [key] of ZONE_LABELS) {
-          document.getElementById(`value-${key}`).textContent = `${grams[key]} g`;
+          document.getElementById(`pval-${key}`).textContent = `${grams[key]} g`;
         }
-        const total = Object.values(grams).reduce((sum, value) => sum + value, 0);
+        if (activeZone) {
+          document.getElementById("controlZoneValue").textContent = `${grams[activeZone]} g`;
+        }
+        const total = Object.values(grams).reduce((sum, v) => sum + v, 0);
         document.getElementById("totalGram").textContent = `${total} g`;
       }
 

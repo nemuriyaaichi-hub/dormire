@@ -574,6 +574,109 @@ footer {
   font-size: 14px;
 }
 
+/* 枕ビジュアル図 */
+.pillow-card {
+  padding: 10px 12px;
+}
+
+.pillow-axis-label {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.05em;
+}
+
+.pillow-axis-top  { margin-bottom: 6px; }
+.pillow-axis-bottom { margin-top: 6px; }
+
+.pillow-wrap {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.pillow-col-label {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  letter-spacing: 0.05em;
+}
+
+.pillow-diagram {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: repeat(3, auto);
+  gap: 5px;
+  padding: 10px;
+  background: #1e2230;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+}
+
+.pzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 12px 8px;
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background 0.15s, border-color 0.15s;
+  text-align: center;
+}
+
+.pzone:active {
+  opacity: 0.75;
+}
+
+.pzone.active {
+  background: rgba(78, 163, 255, 0.12);
+  border-color: var(--accent);
+}
+
+.pzone-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  line-height: 1.2;
+}
+
+.pzone.active .pzone-name {
+  color: var(--accent);
+}
+
+.pzone-value {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+}
+
+.pzone.active .pzone-value {
+  color: var(--accent);
+}
+
+/* 選択ゾーンコントロール */
+.zone-control .gram-zone-head span {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.zone-control .gram-zone-head strong {
+  font-size: 20px;
+  color: var(--accent);
+}
+
 .adjust-grid {
   display: grid;
   gap: 10px;
