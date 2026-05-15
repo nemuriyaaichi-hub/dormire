@@ -166,6 +166,10 @@ export default async (req) => {
     upstreamJson = result.upstreamJson;
   }
 
+  if (!upstream.ok && isTransientGeminiError(upstream)) {
+    return json(buildFallbackDiagnosis({ classification, metrics }), 200);
+  }
+
   if (!upstream.ok) {
     return json(
       {
@@ -190,22 +194,60 @@ export default async (req) => {
 };
 
 async function callGemini(url, payload) {
-  try {
-    const upstream = await fetch(url, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const upstreamJson = await upstream.json().catch(() => null);
-    return { upstream, upstreamJson };
-  } catch (e) {
-    return { error: `Gemini接続失敗: ${e.message || e}` };
+  let last;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const upstream = await fetch(url, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const upstreamJson = await upstream.json().catch(() => null);
+      last = { upstream, upstreamJson };
+      if (!isTransientGeminiError(upstream)) return last;
+    } catch (e) {
+      last = { error: `Gemini接続失敗: ${e.message || e}` };
+    }
+
+    await sleep(700 * (attempt + 1));
   }
+  return last;
 }
 
 function isImageProcessingError(upstreamJson) {
   const message = upstreamJson?.error?.message || "";
   return /process input image|image/i.test(message);
+}
+
+function isTransientGeminiError(upstream) {
+  return upstream?.status === 429 || upstream?.status === 503;
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function buildFallbackDiagnosis({ classification, metrics }) {
+  const labelMap = {
+    N: "理想姿勢",
+    U: "反り腰傾向",
+    丸: "猫背傾向",
+    W: "強いS字カーブ傾向",
+  };
+  const label = labelMap[classification] || "姿勢バランス";
+  const metricCount = Object.keys(metrics || {}).length;
+
+  return {
+    headline: `${label}を確認しました`,
+    comment: `Geminiが混雑していたため、${metricCount}項目の計測値をもとに姿勢を整理しました。現在は${label}として、寝具選定の参考にできます。`,
+    tags: [label, "計測値ベース", "寝具選定参考"],
+    sleep_advice:
+      classification === "U"
+        ? "腰の反りを支えすぎない高さを意識し、仰向け時に首と腰が自然に休まる組み合わせを選んでください。"
+        : classification === "丸"
+          ? "首元を軽く支える高さを選び、肩が前に入りすぎない寝姿勢を保てる枕を合わせてください。"
+          : "首から肩にかけて力が抜ける高さを基準に、仰向けでも横向きでも呼吸しやすい寝姿勢を保ってください。",
+  };
 }
 
 function json(obj, status) {
